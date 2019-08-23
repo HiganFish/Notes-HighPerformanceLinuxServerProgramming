@@ -8,12 +8,15 @@ title: Linux高性能服务器编程读书记录
 
 每学习一部分就写一个demo
 
-2019年8月20日 编写demo <1. 客户端自动发送固定信息> -- 所用基础连接部分和TCP连接部分
-2019年8月23日 编写demo <2. 客户端之间可以互相收到信息> -- 所用截止到网络Api之前
-
 # demo 记录
+
+2019年8月20日 编写demo <1. 客户端自动发送固定信息> -- 所用基础连接部分和TCP连接部分
+2019年8月22日 编写demo <2. 伪全双工TCP> -- 所用截止到网络Api之前
+2019年8月22日 编写demo <3. 伪全双工UDP> -- 所用截止到网络Api之前
+
 ## 客户端自动发送固定信息
-## 客户端之间可以互相收到信息
+
+## 伪全双工TCP
 
 由于也算是初学C语言吧 中间出了好多问题 记录下来
 ```c
@@ -26,7 +29,18 @@ memset(final_msg, '\0', strlen(final_msg));
 // from *.*.*.* : msg\n 
 strcat(final_msg, "from ");
 ```
+## 伪全双工UDP
 
+accept UDP不需要accept
+int conn = accept(sock, (struct sockaddr*)&client, &client_addrlength);
+解释这个问题需要了解下 accept这个函数处于哪个阶段  下面这两张图片 完美的解释了这个问题
+
+![](https://ftp.bmp.ovh/imgs/2019/08/e2abc0bdcc46c722.png)
+![](https://ftp.bmp.ovh/imgs/2019/08/be70bff1d0f5524a.png)
+
+与网络协议更加密切的见[博客](https://blog.csdn.net/yangbodong22011/article/details/69802544)
+目前不太详细去了解这方面, 但是却是必要的
+到现在@2019年8月23日21:22:52@ 为止 还是不明白我需要的是C++服务器编程, 但推荐却是C服务器编程的书籍
 
 分了三篇
 # 第一篇TCP/IP协议详解
