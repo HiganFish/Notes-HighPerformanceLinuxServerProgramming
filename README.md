@@ -1,5 +1,5 @@
 ---
-title: Linux高性能服务器编程读书记录
+title: Linux高性能服务器编程记录
 
 ---
 开头选了这本书, 看到这本书是他人总结三大本后自己写的, 先求个理解大概.
@@ -11,8 +11,12 @@ title: Linux高性能服务器编程读书记录
 # demo 记录
 
 2019年8月20日 编写demo <1. 客户端自动发送固定信息> -- 所用基础连接部分和TCP连接部分
+
 2019年8月22日 编写demo <2. 伪全双工TCP> -- 所用截止到网络Api之前
+
 2019年8月22日 编写demo <3. 伪全双工UDP> -- 所用截止到网络Api之前
+
+2019年8月25日 复现 源码 <4. 代码清单5-12 访问daytime服务> -- 第五章结束
 
 ## 客户端自动发送固定信息
 
@@ -302,10 +306,73 @@ struct linger {
 ```
 #### 网络信息API
 ```c
+#include <netdb.h>
+// 通过主机名查找ip
+struct hostent* gethostbyname(const char* name);
+
+// 通过ip获取主机完整信息 
+// type为IP地址类型 AF_INET和AF_INET6
+struct hostent* gethostbyaddr(const void* addr, size_t len, int type);
+
+struct hostent {
+	char* h_name;
+	char ** h_aliases;
+	int h_addrtype;
+	int h_length;
+	char** h_addr_list; /* 按网络字节序列出主机IP地址列表*/
+}
+```
+以下两个函数通过读取/etc/services文件 来获取服务信息
+```c
+#include <netdb.h>
+// 根据名称获取某个服务的完整信息
+struct servent getservbyname(const char* name, const char* proto);
+
+// 根据端口号获取服务信息
+struct servent getservbyport(int port, const char* proto);
+
+struct servent {
+	char* s_name; /* 服务名称*/
+	char ** s_aliases; /* 服务的别名列表*/
+	int s_port; /* 端口号*/
+	char* s_proto; /* 服务类型, 通常为TCP或UDP*/
+}
+```
+```c
+#include <netdb.h>
+// 内部使用的gethostbyname 和 getserverbyname
+// hostname 用于接收主机名, 也可以用来接收字符串表示的IP地址(点分十进制, 十六进制字符串)
+// service 用于接收服务名, 字符串表示的十进制端口号
+// hints参数 对getaddrinfo的输出进行更准确的控制, 可以设置为NULL, 允许反馈各种有用的结果
+// result 指向一个链表, 用于存储getaddrinfo的反馈结果
+int getaddrinfo(const char* hostname, const char* service, const struct addrinfo* hints, struct addrinfo** result)
+
+struct addrinfo{
+	int ai_flags;
+	int ai_family;
+	int ai_socktype; /* 服务类型, SOCK_STREAM或者SOCK_DGRAM*/
+	int ai_protocol;
+	socklen_t ai_addrlen;
+	char* ai_canonname; /* 主机的别名*/
+	struct sockaddr* ai_addr; /* 指向socket地址*/
+	struct addrinfo* ai_next; /* 指向下一个结构体*/
+}
+
+// 需要手动的释放堆内存
+void freeaddrinfo(struct addrinfo* res);
+```
+![](https://ftp.bmp.ovh/imgs/2019/08/7ebedb14d8eedeac.png)
+
+```c
+#include <netdb.h>
+// host 存储返回的主机名
+// serv存储返回的服务名
+
+int getnameinfo(const struct sockaddr* sockaddr, socklen_t addrlen, char* host, socklen_t hostlen, char* serv
+	socklen_t servlen, int flags);
 
 ```
-
-![](Linux高性能服务器编程读书记录/socket选项.jpg)
+![](https://ftp.bmp.ovh/imgs/2019/08/bc7196e9a30d5152.png)
 
 测试
 使用
