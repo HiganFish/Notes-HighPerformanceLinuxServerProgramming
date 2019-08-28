@@ -9,15 +9,14 @@ title: Linux高性能服务器编程记录
 每学习一部分就写一个demo
 
 # demo 记录
-
+```
 2019年8月20日 编写demo <1. 客户端自动发送固定信息> -- 所用基础连接部分和TCP连接部分
-
 2019年8月22日 编写demo <2. 伪全双工TCP> -- 所用截止到网络Api之前
-
 2019年8月22日 编写demo <3. 伪全双工UDP> -- 所用截止到网络Api之前
-
 2019年8月25日 复现 源码 <4. 代码清单5-12 访问daytime服务> -- 第五章结束
-
+2019年8月25日 复现 源码 <5. 代码清单6-3 用sendfile函数传输文件>
+2019年8月25日 复现 源码 <6. 代码清单6-4 用splice函数实现的回射服务器>
+```
 ## 客户端自动发送固定信息
 
 ## 伪全双工TCP
@@ -380,4 +379,132 @@ int getnameinfo(const struct sockaddr* sockaddr, socklen_t addrlen, char* host, 
 telnet ip port #来连接服务器的此端口
 netstat -nt | grep port #来查看此端口的监听
 ```
+## 第六章高级IO函数
 
+Linux提供的高级IO函数, 自然是特定条件下能力更强, 不然要他干啥, 特定条件自然限制了他的使用频率
+
+### 创建文件描述符
+#### pipe函数
+这个函数可用于创建一个管道, 实现进程间的通信. (后面13.4节介绍更多, 待我学到后回来补坑)
+
+```c
+// 函数定义
+// 参数文件描述符数组 fd[0] 读入 fd[1]写入 单向管道
+// 成功返回0, 并将一对打开的文件描述符填入其参数指向的数组
+// 失败返回-1 errno
+#include <unistd.h>
+int pipe(int fd[2]);
+
+// 双向管道
+// 第一个参数为 协议PF_UNIX(书上是AF_UNIX, 还需要实际测试下)
+#include <sys/types.h>
+#include <sys/socket.h>
+int socketpair(int domain, int type, int protocol, int fd[2]);
+```
+#### dup和dup2函数
+**文件描述符**
+```
+文件描述符在是一个非负整数。是一个索引值,指向内核为每一个进程所维护的该进程打开文件的记录表。
+STDOUT_FILENO(值为1)- 值为1的文件描述符为标准输出, 关闭STDOUT_FILENO后用dup即可返回最小可用值(目前为, 1) 这样输出就重定向到了调用dup的参数指向的文件
+```
+
+将标准输入重定向到一个`文件`或一个网络连接
+```c
+#include <unistd.h>
+// 返回的文件描述符总是取系统当前可用的最小整数值
+int dup(int file_descriptor);
+// 返回的整数值不小于file_descriptor_two参数.
+int dup2(int file_descriptor, int file_descriptor_two);
+```
+dup函数创建一个新的文件描述符, 新的文件描述符和原有的file_descriptor共同指向相同的目标.
+
+### 读写数据
+#### readv/writev
+```c
+#include <sys/uio.h>
+// count 为 vector的长度, 即为有多少块内存
+// 成功时返回写入\读取的长度 失败返回-1
+ssize_t readv(int fd, const struct iovec* vector, int count);
+ssize_t writev(int fd, const struct iovec* vector, int count);
+
+struct iovec {
+	void* iov_base /* 内存起始地址*/
+	size_t iov_len /* 这块内存长度*/
+}
+```
+sendfile函数
+```c
+#include <sys/sendfile.h>
+// offset为指定输入流从哪里开始读, 如果为NULL 则从开头读取
+ssize_t sendfile(int out_fd, int in_fd, off_t* offset, size_t count);
+
+O_RDONLY只读模式
+O_WRONLY只写模式
+O_RDWR读写模式
+int open(file_name, flag);
+```
+stat结构体, 可用fstat生成, **简直就是文件的身份证**
+```c
+#include <sys/stat.h>
+struct stat
+{
+    dev_t       st_dev;     /* ID of device containing file -文件所在设备的ID*/
+    ino_t       st_ino;     /* inode number -inode节点号*/
+    mode_t      st_mode;    /* protection -保护模式?*/
+    nlink_t     st_nlink;   /* number of hard links -链向此文件的连接数(硬连接)*/
+    uid_t       st_uid;     /* user ID of owner -user id*/
+    gid_t       st_gid;     /* group ID of owner - group id*/
+    dev_t       st_rdev;    /* device ID (if special file) -设备号，针对设备文件*/
+    off_t       st_size;    /* total size, in bytes -文件大小，字节为单位*/
+    blksize_t   st_blksize; /* blocksize for filesystem I/O -系统块的大小*/
+    blkcnt_t    st_blocks;  /* number of blocks allocated -文件所占块数*/
+    time_t      st_atime;   /* time of last access -最近存取时间*/
+    time_t      st_mtime;   /* time of last modification -最近修改时间*/
+    time_t      st_ctime;   /* time of last status change - */
+};
+```
+**身份证**生成函数
+```c
+// 第一个参数需要调用open生成文件描述符
+// 下面其他两个为文件全路径
+int fstat(int filedes, struct stat *buf);
+
+int stat(const char *path, struct stat *buf);
+// 当路径指向为符号链接的时候, lstat为符号链接的信息. 二stat为符号链接指向文件信息
+int lstat(const char *path, struct stat *buf);
+
+/*
+* ls -s source dist  建立软连接, 类似快捷方式, 也叫符号链接
+* ls source dist  建立硬链接, 同一个文件使用多个不同的别名, 指向同一个文件数据块, 只要硬链接不被完全
+* 删除就可以正常访问
+* 文件数据块 - 文件的真正数据是一个文件数据块, 打开的`文件`指向这个数据块, 就是说
+* `文件`本身就类似快捷方式, 指向文件存在的区域.
+*/
+```
+#### mmap和munmap函数
+
+一个创建一块进程通讯共享的内存(可以将文件映射入其中), 一个释放这块内存
+```c
+#include <sys/mman.h>
+
+// start 内存起始位置, 如果为NULL则系统分配一个地址 length为长度
+// port参数 PROT_READ(可读) PROT_WRITE(可写) PROT_EXEC(可执行), PROT_NONE(不可访问)
+// flag参数 内存被修改后的行为
+// - MAP_SHARED 进程间共享内存, 对内存的修改反映到映射文件中
+// - MAP_PRIVATE 为调用进程私有, 对该内存段的修改不会反映到文件中
+// - MAP_ANONUMOUS 不是从文件映射而来, 内容被初始化为0, 最后两个参数被忽略
+// 成功返回区域指针, 失败返回 -1
+void* mmap(void* start, size_t length, int port, int flags, int fd, off_t offset);
+// 成功返回0 失败返回-1
+int munmap(void* start, size_t length);
+```
+#### splice函数
+用于在两个文件名描述符之间移动数据, 0拷贝操作
+```c
+#include <fcntl.h>
+// fd_in 为文件描述符, 如果为管道文件描述符则 off_in必须为NULL, 否则为读取开始偏移位置
+// len为指定移动的数据长度, flags参数控制数据如何移动.
+// - SPLICE_F_NONBLOCK 非阻塞splice操作, 但会受文件描述符自身的阻塞
+// - SPLICE_F_MORE 给内核一个提示, 后续的splice调用将读取更多的数据???????
+ssize_t splice(int fd_in, loff_t* off_in, int fd_out, loff_t* off_out, size_t len, unsigned int flags);
+```
