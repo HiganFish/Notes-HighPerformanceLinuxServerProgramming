@@ -16,6 +16,8 @@ title: Linux高性能服务器编程记录
 2019年8月25日 复现 源码 <4. 代码清单5-12 访问daytime服务> -- 第五章结束
 2019年8月28日 复现 源码 <5. 代码清单6-3 用sendfile函数传输文件>
 2019年8月28日 复现 源码 <6. 代码清单6-4 用splice函数实现的回射服务器>
+2019年9月02日 编写demo <7. 贪吃蛇客户端及服务器>
+2019年9月04日 编写demo <8. 服务器模型-CS模型>
 ```
 ## 客户端自动发送固定信息
 
@@ -45,6 +47,16 @@ int conn = accept(sock, (struct sockaddr*)&client, &client_addrlength);
 目前不太详细去了解这方面, 但是却是必要的
 到现在@2019年8月23日21:22:52@ 为止 还是不明白我需要的是C++服务器编程, 但推荐却是C服务器编程的书籍
 
+## 贪吃蛇客户端及服务器
+贪吃蛇源码来源于网络, 后续会更换成自己的贪吃蛇程序.
+
+开始编写的服务器, 在socket异常关闭后 会收到大量的空字符串
+
+## 服务器模型-CS模型
+这个代码书上没有, 从网络上学习 并进行更改 后续会更改这个demo 实现聊天程序
+个人修改部分 为 判断socket为非服务器fd后的操作, 使用了splice函数 回复信息还有 通过splice函数的返回值确认是否此fd已经失效, 需要删除
+
+
 分了三篇
 # 第一篇TCP/IP协议详解
 ## 第一章 TCP/IP协议族
@@ -53,7 +65,7 @@ int conn = accept(sock, (struct sockaddr*)&client, &client_addrlength);
 协议族中协议众多, 这本书只选取了IP和TCP协议 - 对网络编程影响最直接
 
 见得最多就是这四层结构了, 不过这本书写得更加详细一些
-![](Linux高性能服务器编程读书记录/四层结构.jpg)
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E5%9B%9B%E5%B1%82%E7%BB%93%E6%9E%84.jpg)
 
 同样七层是osi参考模型, 简化后得到四层
 ![](https://gss1.bdstatic.com/9vo3dSag_xI4khGkpoWK1HF6hhy/baike/c0%3Dbaike80%2C5%2C5%2C80%2C26/sign=3a1768f4c6fc1e17e9b284632bf99d66/0dd7912397dda144d48ab350bbb7d0a20df48655.jpg)
@@ -121,8 +133,8 @@ socket最开始的含义是 一个IP地址和端口对. 唯一的表示了TCP通
 ### API
 
 #### 基础连接
-![](Linux高性能服务器编程读书记录/地址结构体.jpg)
-![](Linux高性能服务器编程读书记录/协议组合地址族.jpg)
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E5%9C%B0%E5%9D%80%E7%BB%93%E6%9E%84%E4%BD%93.jpg)
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E5%8D%8F%E8%AE%AE%E7%BB%84%E5%90%88%E5%9C%B0%E5%9D%80%E6%97%8F.jpg)
 ```c++
 // 主机序和网络字节序转换
 #include <netinet/in.h>
@@ -508,3 +520,118 @@ int munmap(void* start, size_t length);
 // - SPLICE_F_MORE 给内核一个提示, 后续的splice调用将读取更多的数据???????
 ssize_t splice(int fd_in, loff_t* off_in, int fd_out, loff_t* off_out, size_t len, unsigned int flags);
 ```
+#### select() 函数
+
+```c
+#include <fcntl.h> 
+// maxfdp 最大数 FD_SETSIZE
+// struct fd_set 一个集合,可以存储多个文件描述符
+// - FD_ZERO(&fd_set) 清空 -FD_SET(fd, &fd_set) 放入fd FD_CLR(fd, &fd_set)从其中清除fd
+// - FD_ISSET(fd, &fd_set) 判断是否在其中
+// readfds  需要监视的文件描述符读变化
+// writefds 需要监视的文件描述符写变化
+// errorfds 错误
+// 返回值 负值为错误 0 为超时
+int select(int maxfdp,fd_set *readfds,fd_set *writefds,fd_set *errorfds,struct timeval*timeout); 
+// int result_select = select(FD_SETSIZE, &testfds, (fd_set *)0, (fd_set *)0, (struct timeval*)0);
+```
+## 第七章Linux服务器程序规范
+
+- Linux程序服务器 一般以后台进程形式运行.  后台进程又称为守护进程(daemon). 他没有控制终端, 因而不会意外的接收到用户输入. 守护进程的父进程通常都是init进程(PID为1的进程)
+- Linux服务器程序有一套日志系统, 他至少能输出日志到文件. 日志这东西太重要了,排错对比全靠它.
+- Linux服务器程序一般以某个专门的非root身份运行. 比如mysqld有自己的账户mysql.
+- Linux服务器程序一般都有自己的配置文件, 而不是把所有配置都写死在代码里面, 方便后续的更改.
+- Linux服务器程序通常在启动的时候生成一个PID文件并存入/var/run 目录中, 以记录改后台进程的PID.
+- Linux服务器程序通常需要考虑系统资源和限制, 预测自己的承受能力
+
+### 日志
+
+```shell
+sudo service rsyslog restart // 启动守护进程
+```
+```c
+#include <syslog.h>
+// priority参数是所谓的设施值(记录日志信息来源, 默认为LOG_USER)与日志级别的按位或
+// - 0 LOG_EMERG  /* 系统不可用*/
+// - 1 LOG_ALERT   /* 报警需要立即采取行动*/
+// - 2 LOG_CRIT /* 非常严重的情况*/
+// - 3 LOG_ERR  /* 错误*/
+// - 4 LOG_WARNING /* 警告*/
+// - 5 LOG_NOTICE /* 通知*/
+// - 6 LOG_INFO /* 信息*/
+//  -7 LOG_DEBUG /* 调试*/
+void syslog(int priority, const char* message, .....);
+
+// ident 位于日志的时间后 通常为名字
+// logopt 对后续 syslog调用的行为进行配置
+// -  0x01 LOG_PID  /* 在日志信息中包含程序PID*/
+// -  0x02 LOG_CONS /* 如果信息不能记录到日志文件, 则打印到终端*/
+// -  0x04 LOG_ODELAY /* 延迟打开日志功能直到第一次调用syslog*/
+// -  0x08 LOG_NDELAY /* 不延迟打开日志功能*/
+// facility参数可以修改syslog函数中的默认设施值
+void openlog(const char* ident, int logopt, int facility);
+
+// maskpri 一共八位 0000-0000
+// 如果将最后一个0置为1 表示 记录0级别的日志
+// 如果将最后两个0都置为1 表示记录0和1级别的日志
+// 可以通过LOG_MASK() 宏设定 比如LOG_MASK(LOG_CRIT) 表示将倒数第三个0置为1, 表示只记录LOG_CRIT
+// 如果直接设置setlogmask(3); 3的二进制最后两个数均为1 则记录 0和1级别的日志
+int setlogmask(int maskpri);
+
+// 关闭日志功能
+void closelog();
+```
+
+### 用户信息, 切换用户
+UID - 真实用户ID
+EUID - 有效用户ID - 方便资源访问
+GID - 真实组ID
+EGID - 有效组ID
+```c
+#include <sys/types.h>
+#include <unistd.h>
+
+uid_t getuid();
+uid_t geteuid();
+gid_t getgid();
+gid_t getegid();
+int setuid(uid_t uid);
+int seteuid(uid_t euid);
+int setgid(gid_t gid);
+int setegid(gid_t gid);
+```
+
+可以通过 `setuid`和`setgid`切换用户 **root用户uid和gid均为0**
+
+### 进程间关系
+PGID - 进程组ID(Linux下每个进程隶属于一个进程组)
+
+#include <unistd.h>
+pid_t getpgid(pid_t pid); 成功时返回pid所属的pgid 失败返回-1
+int setpgid(pid_t pid, pid_t pgid);
+
+**会话**
+一些有关联的进程组将形成一个会话
+略过
+
+**查看进程关系**
+ps和less
+
+**资源限制**
+略
+**改变目录**
+略
+
+## 第八章高性能服务器程序框架
+
+### 服务器模型-CS模型
+
+**优点**
+- 实现起来简单
+**缺点**
+- 服务器是通信的中心, 访问过大的时候会导致响应过慢
+
+模式图
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E5%9B%BE8-2%20TCP%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%92%8C%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.png)
+
+编写的demo 没有用到fork函数. 后续待完善
