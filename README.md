@@ -17,7 +17,7 @@ title: Linux高性能服务器编程记录
 2019年8月28日 复现 源码 <5. 代码清单6-3 用sendfile函数传输文件>
 2019年8月28日 复现 源码 <6. 代码清单6-4 用splice函数实现的回射服务器>
 2019年9月02日 编写demo <7. 贪吃蛇客户端及服务器>
-2019年9月04日 编写demo <8. 服务器模型-CS模型>
+2019年9月04日06日更新 编写demo <8. 服务器模型-CS模型>
 ```
 ## 客户端自动发送固定信息
 
@@ -56,6 +56,11 @@ int conn = accept(sock, (struct sockaddr*)&client, &client_addrlength);
 这个代码书上没有, 从网络上学习 并进行更改 后续会更改这个demo 实现聊天程序
 个人修改部分 为 判断socket为非服务器fd后的操作, 使用了splice函数 回复信息还有 通过splice函数的返回值确认是否此fd已经失效, 需要删除
 
+2019年9月6日18:35:38更新
+目前服务器加入了 登录和注册功能 以及重复登录验证
+消息分发加入了用户名提示
+后续有时间会继续更新这个demo
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/CS%E8%81%8A%E5%A4%A9%E6%9C%8D%E5%8A%A1%E5%99%A8demo.png)
 
 分了三篇
 # 第一篇TCP/IP协议详解
