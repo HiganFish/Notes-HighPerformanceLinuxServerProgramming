@@ -1,5 +1,5 @@
 ---
-title: Linux高性能服务器编程记录
+title: README
 
 ---
 开头选了这本书, 看到这本书是他人总结三大本后自己写的, 先求个理解大概.
@@ -18,6 +18,8 @@ title: Linux高性能服务器编程记录
 2019年8月28日 复现 源码 <6. 代码清单6-4 用splice函数实现的回射服务器>
 2019年9月02日 编写demo <7. 贪吃蛇客户端及服务器>
 2019年9月04日06日更新 编写demo <8. 服务器模型-CS模型>
+2019年9月11日 复现 源码 <9. 代码清单-IO复用>
+2019年9月13日 复现 源码 <10. 代码清单9-6和9-7 聊天室程序>
 ```
 ## 客户端自动发送固定信息
 
@@ -62,7 +64,42 @@ int conn = accept(sock, (struct sockaddr*)&client, &client_addrlength);
 后续有时间会继续更新这个demo
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/CS%E8%81%8A%E5%A4%A9%E6%9C%8D%E5%8A%A1%E5%99%A8demo.png)
 
-分了三篇
+
+## I/O复用
+LT和ET模式
+ET模式
+```
+-> 123456789-123456789-123456789
+event trigger once
+get 9bytes of content: 123456789
+get 9bytes of content: -12345678
+get 9bytes of content: 9-1234567
+get 4bytes of content: 89
+read later
+```
+LT模式
+```
+-> 123456789-123456789-123456789
+event trigger once
+get 9bytes of contents: 123456789
+event trigger once
+get 9bytes of contents: -12345678
+event trigger once
+get 9bytes of contents: 9-1234567
+event trigger once
+get 4bytes of contents: 89
+```
+ET模式有任务到来就必须做完, 因为后续将不会继续通知这个事件, 所以ET是epoll的高效工作模式
+LT模式只要事件没被处理就会一直通知
+
+## 聊天室程序
+这个在写完客户端和服务器之后发现只能连接 服务器却不能收到数据
+开始以为是客户端写的问题 用`tcpdump -i lo -nnA 'port 51000 and src host 192.168.9.35'`
+发现客户端能够发送数据, 服务器也会回传确认
+
+然后去观察服务器打开调试发现程序阻塞在accept 然而accept是在一个if判断里, 只有文件描述符是监听的文件
+描述符才会进入其中. 然而这里却进入了不该进入的情况. 观察if的判断条件发现了问题
+
 # 第一篇TCP/IP协议详解
 ## 第一章 TCP/IP协议族
 
@@ -640,3 +677,253 @@ ps和less
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E5%9B%BE8-2%20TCP%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%92%8C%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.png)
 
 编写的demo 没有用到fork函数. 后续待完善
+### 服务器框架 IO模型
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%9F%BA%E6%9C%AC%E6%A1%86%E6%9E%B6.png)
+
+这个模型大概能够理解, 自己也算是学了半年的Javaweb.
+
+socket在创建的时候默认是阻塞的, 不过可以通过传`SOCK_NONBLOCK`参解决
+非阻塞调用都会立即返回 但可能事件没有发生(recv没有接收到信息), 没有发生和出错都会`返回-1` 所以需要通过`errno`来区分这些错误.
+**事件未发生**
+accept, send,recv errno被设置为 `EAGAIN(再来一次)`或`EWOULDBLOCK(期望阻塞)`
+connect 被设置为 `EINPROGRESS(正在处理中)`
+
+需要在事件已经发生的情况下 去调用非阻塞IO, 才能提高性能
+
+常用IO复用函数 `select` `poll` `epoll_wait` 将在第九章后面说明
+信号将在第十章说明
+
+### 两种高效的事件处理模式和并发模式
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/Reactor%E6%A8%A1%E5%BC%8F.png)
+
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/Proactor%E6%A8%A1%E5%BC%8F.png)
+
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E7%94%A8%E5%90%8C%E6%AD%A5IO%E6%A8%A1%E6%8B%9F%E5%87%BA%E7%9A%84Proactor%E6%A8%A1%E5%BC%8F.png)
+
+程序分为计算密集型(CPU使用很多, IO资源使用很少)和IO密集型(反过来).
+前者使用并发编程反而会降低效率, 后者则会提升效率
+并发编程有多进程和多线程两种方式
+
+并发模式 - IO单元和多个逻辑单元之间协调完成任务的方法.
+服务器主要有两种并发模式
+- 半同步/半异步模式
+- 领导者/追随者模式
+
+**半同步/半异步模式**
+在IO模型中, 异步和同步的区分是内核向应用程序通知的是何种IO事件(就绪事件还是完成事件), 以及由谁来完成IO读写(应用程序还是内核)
+
+而在这里(并发模式) 
+同步指的是完全按照代码序列的顺序执行 - 按照同步方式运行的线程称为同步线程
+异步需要系统事件(中断, 信号)来驱动 - 按照异步方式运行的线程称为异步线程
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E5%B9%B6%E5%8F%91%E6%A8%A1%E5%BC%8F%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E5%92%8C%E5%90%8C%E6%AD%A5.png)
+
+服务器(需要较好的实时性且能同时处理多个客户请求) - 一般使用同步线程和异步线程来实现,即为半同步/半异步模式
+同步线程 - 处理客户逻辑, 处理请求队列中的对象
+异步线程 - 处理IO事件, 接收到客户请求后将其封装成请求对象并插入请求队列
+
+半同步/半异步模式 存在变体 `半同步/半反应堆模式`
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E5%8D%8A%E5%90%8C%E6%AD%A5%E5%8D%8A%E5%8F%8D%E5%BA%94%E5%A0%86%E6%A8%A1%E5%BC%8F.png)
+
+异步线程 - 主线程 - 负责监听所有socket上的事件
+
+**领导者/追随者模式**
+略
+
+### 高效编程方法 - 有限状态机
+```c
+// 状态独立的有限状态机
+STATE_MACHINE(Package _pack) {
+	
+	PackageType _type = _pack.GetType();
+	switch(_type) {
+		case type_A:
+			xxxx;
+			break;
+		case type_B:
+			xxxx;
+			break;
+	}
+}
+
+// 带状态转移的有限状态机
+STATE_MACHINE() {
+	State cur_State = type_A;
+	while(cur_State != type_C) {
+	
+		Package _pack = getNewPackage();
+		switch(cur_State) {
+			
+			case type_A:
+				process_package_state_A(_pack);
+				cur_State = type_B;
+				break;
+			case type_B:
+				xxxx;
+				cur_State = type_C;
+				break;
+		}
+	}
+}
+```
+
+花了小一个小时 终于一个字母一个字母的抄完了那个5000多字的代码
+@2019年9月8日22:08:46@
+
+### 提高服务器性能的其他建议 池 数据复制 上下文切换和锁
+
+**池** - 用空间换取时间
+进程池和线程池
+
+**数据复制** - 高性能的服务器应该尽量避免不必要的复制
+
+**上下文切换和锁**
+减少`锁`的作用区域. 不应该创建太多的工作进程, 而是使用专门的业务逻辑线程.
+
+## 第九章 I/O复用
+
+I/O复用使得程序能同时监听多个文件描述符.
+- 客户端程序需要同时处理多个socket 非阻塞connect技术
+- 客户端程序同时处理用户输入和网络连接 聊天室程序
+- TCP服务器要同时处理监听socket和连接socket
+- 同时处理TCP和UDP请求 - 回射服务器
+- 同时监听多个端口, 或者处理多种服务 - xinetd服务器
+
+常用手段`select`, `poll`, `epoll`
+
+### Api
+```c
+#inlcude <sys/select.h>
+// nfds - 被监听的文件描述符总数
+// 后面三个分别指向 可读, 可写, 异常等事件对应的文件描述符集合
+// timeval select超时时间 如果传递0 则为非阻塞, 设置为NULL则为阻塞
+// 成功返回就绪(可读, 可写, 异常)文件描述符的总数, 没有则返回0 失败返回-1
+int select (int nfds, fd_set* readfds, fd_set* writefds, fd_set* exceptfds, struct timeval* timeout);
+
+//操作fd_set的宏
+FD_ZERO(fd_set* fdset);
+FD_SET(int fd, fd_set* fdset);
+FD_CLR(int fd, fd_set* fdset);
+FD_ISSET(int fd, fd_set* fdset);
+// 设置 timeval 超时时间
+struct timeval {
+	long tv_sec; // 秒
+	long tv_usec; // 微秒
+}
+```
+```c
+#include <poll.h>
+// fds 结构体类型数组 指定我们感兴趣的文件描述符上发生的可读可写和异常事件\
+// nfds 遍历结合大小
+// timeout 单位为毫秒 -1 为阻塞 0 为立即返回
+int poll(struct pollfd* fds, nfds_t nfds, int timeout);
+
+struct pollfd {
+	int fd;
+	short events;  //注册的事件, 告知poll监听fd上的哪些事件
+	short revents; // 实际发生的事件
+}
+```
+```c
+#include <epoll.h>
+// size 参数只是给内核一个提示, 事件表需要多大
+// 函数返回其他所有epoll系统调用的第一个参数, 来指定要访问的内核事件表
+int epoll_create(int size);
+
+// epfd 为 epoll_create的返回值
+// op为操作类型
+// - EPOLL_CTL_ADD 向事件表中注册fd上的事件
+// - EPOLL_CTL_MOD 修改fd上的注册事件
+// - EPOLL_CTL_DEL 删除fd上的注册事件
+// fd 为要操作的文件描述符
+int epoll_ctl(int epfd, int op, int fd, struct epoll_event* event);
+
+struct epoll_event {
+	_uint32_t events; // epoll事件
+	epoll_data_t data; // 用户数据 是一个联合体
+}
+
+typedef union epoll_data {
+	void* ptr; // ptr fd 不能同时使用
+	int fd;
+	uint32_t u32;
+	uint64_t u64;
+}epoll_data_t
+
+// maxevents监听事件数 必须大于0
+// timeout 为-1 表示阻塞
+// 成功返回就绪的文件描述符个数 失败返回-1
+int epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout);
+```
+### select系统调用
+
+文件描述符就绪条件
+- socket内核接收缓存区中的字节数大于或等于 其低水位标记
+- socket通信的对方关闭连接, 对socket的读操作返回0
+- 监听socket上有新的连接请求
+- socket上有未处理的错误, 可以使用getsockopt来读取和清除错误
+- socket内核的发送缓冲区的可用字节数大于或等于 其低水位标记
+- socket的写操作被关闭, 对被关闭的socket执行写操作将会触发一个SIGPIPE信号
+- socket使用非阻塞connect 连接成功或失败后
+
+### poll系统调用
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/poll%E6%97%B6%E9%97%B4%E7%B1%BB%E5%9E%8B1.png)
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/poll%E6%97%B6%E9%97%B4%E7%B1%BB%E5%9E%8B2.png)
+
+### epoll系列系统调用
+
+epoll是Linux特有的I/O复用函数, 实现上与select,poll有很大的差异
+- epoll使用一组函数完成任务
+- epoll把用户关心的文件描述符上的事件放在内核里的一个事件表中
+- epoll无需每次调用都传入文件描述符集或事件集.
+
+有特定的文件描述符创建函数, 来标识这个事件表`epoll_create()`
+`epoll_ctl()` 用来操作这个内核事件表
+`epoll_wait()` 为主要函数 成功返回就绪的文件描述符个数 失败返回-1
+如果`epoll_wait()`函数检测到事件,就将所有就绪的事件从内核事件表(由第一个参数, epoll_create返回的结果) 中复制到第二个参数event指向的数组中, 这个数组只用于输出`epoll_wait`检测到的就绪事件.
+
+*event不同于select和poll的数组参数 既用于传入用户注册的事件, 又用于输出内核检测到的就绪事件, 提高了效率*
+
+```c
+// 索引poll返回的就绪文件描述符
+int ret = poll(fds, MAX_EVENT_NUMBER - 1);
+// 遍历
+for(int i = 0; i < MAX_EVENT_NUMBER; ++i) {
+	if(fds[i].revents & POLLIN) {
+		int sockfd = fds[i].fd;
+	}
+}
+
+// 索引epoll返回的就绪文件描述符
+int ret = epoll_wait(epoll_fd, events, MAX_EVENT_NUMBER,  -1);
+for(int i = 0; i < ret; i++) {
+	int sockfd = events[i].data.fd;
+	// sockfd 一定就绪 ?????
+}
+```
+
+**LT和ET模式**
+LT和ET模式
+ET模式
+```
+-> 123456789-123456789-123456789
+event trigger once
+get 9bytes of content: 123456789
+get 9bytes of content: -12345678
+get 9bytes of content: 9-1234567
+get 4bytes of content: 89
+read later
+```
+LT模式
+```
+-> 123456789-123456789-123456789
+event trigger once
+get 9bytes of contents: 123456789
+event trigger once
+get 9bytes of contents: -12345678
+event trigger once
+get 9bytes of contents: 9-1234567
+event trigger once
+get 4bytes of contents: 89
+```
+ET模式有任务到来就必须做完, 因为后续将不会继续通知这个事件, 所以ET是epoll的高效工作模式
+LT模式只要事件没被处理就会一直通知
