@@ -927,3 +927,227 @@ get 4bytes of contents: 89
 ```
 ET模式有任务到来就必须做完, 因为后续将不会继续通知这个事件, 所以ET是epoll的高效工作模式
 LT模式只要事件没被处理就会一直通知
+### 三种IO复用的比较
+`select`以及`poll`和`epoll`
+相同
+- 都能同时监听多个文件描述符, 都将等待timeout参数指定的超时时间, 直到一个或多个文件描述符上有事件发生.
+- 返回值为就绪的文件描述符数量, 返回0则表示没有事件发生
+- ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E4%B8%89%E7%A7%8DIO%E5%A4%8D%E7%94%A8%E6%AF%94%E8%BE%83.png)
+
+### I/O 复用的高级应用, 非阻塞connect
+
+connect出错的时候会返回一个errno值 EINPROGRESS - 表示对非阻塞socket调用connect, 连接又没有立即建立的时候, 这时可以调用select和poll函数来监听这个连接失败的socket上的可写事件.
+
+当函数返回的时候, 可以用getsockopt来读取错误码, 并清楚该socket上的错误. 错误码为0表示成功
+
+
+## 第十章信号
+
+### Api
+发送信号Api
+```c
+#include <sys/types.h>
+#include <signal.h>
+
+// pid > 0 发送给PID为pid标识的进程
+//  0 发送给本进程组的其他进程
+// -1 发送给进程以外的所有进程, 但发送者需要有对目标进程发送信号的权限
+// < -1 发送给组ID为 -pid 的进程组中的所有成员
+
+// 出错信息 EINVAL 无效信号, EPERM 该进程没有权限给任何一个目标进程 ESRCH 目标进程(组) 不存在
+int kill(pid_t pid, int sig);
+```
+接收信号Api
+```c
+#include <signal.h>
+typedef void(*_sighandler_t) (int);
+
+#include <bits/signum.h> // 此头文件中有所有的linux可用信号
+// 忽略目标信号
+#define SIG_DFL ((_sighandler_t) 0)
+// 使用信号的默认处理方式
+#define SIG_IGN ((_sighandler_t) 1)
+```
+常用信号
+```
+SIGHUP 控制终端挂起
+SIGPIPE 往读端被关闭的管道或者socket连接中写数据
+SIGURG socket连接上收到紧急数据
+SIGALRM 由alarm或setitimer设置的实时闹钟超时引起
+SIGCHLD 子进程状态变化
+```
+信号函数
+```c
+// 为一个信号设置处理函数
+#include <signal.h>
+// _handler 指定sig的处理函数
+_sighandler_t signal(int sig, __sighandler_t _handler)
+
+
+int sigaction(int sig, struct sigaction* act, struct sigaction* oact)
+```
+### ??
+
+信号是用户, 系统, 或者进程发送给目标进程的信息, 以通知目标进程某个状态的改变或者系统异常.
+产生条件
+- 对于前台进程
+用户可以通过输入特殊的终端字符来给它发送信号, CTRL+C 通常为一个中断信号 `SIGINT`
+- 系统异常
+浮点异常和非法内存段的访问
+- 系统状态变化
+由alarm定时器到期将引起`SIGALRM`信号
+- 运行kill命令或调用kill函数
+
+*服务器必须处理(至少忽略) 一些常见的信号, 以免异常终止*
+
+中断系统调用?
+
+## 第十一章定时器
+
+### Api
+
+### 正文
+
+网络程序需要处理的第三类事件是定时事件
+定时 - 指在一段时间之后触发某段代码的机制
+
+Linux提供了三种定时实现方法
+- socket选项`SO_RCVTIMEO` 和 `SO_SNDTIMEO`
+- SIGALRM信号
+- IO复用系统调用的超时参数
+
+
+第五章介绍了`SO_RCVTIMEO`和`SO_SNDTIMEO` 分别用来设置socket `接受数据超时时间` 和 `发送数据超时时间` 这两个选项对如下有效
+
+复习一下设定函数
+```c
+option_value在这里为 timeval 结构体
+
+// sockfd 目标socket, level执行操作协议(IPv4, IPv6, TCP) option_name 参数指定了选项的名字. 后面值和长度
+// 成功时返回0 失败返回-1
+int getsockopt(int sockfd, int level, int option_name, void* option_value, 
+						socklen_t restrict option_len);
+int setsockopt(int sockfd, int level, int option_name, void* option_value, 
+						socklen_t restrict option_len);
+```
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/SO_RCVTIMEO%E5%92%8CSO_SNDTIMEO%E9%80%89%E9%A1%B9%E7%9A%84%E4%BD%9C%E7%94%A8.png)
+
+定时器的SIGALRM信号
+有`alarm`和`setitimer`函数设置的闹钟超时 - 触发SIGALRM信号
+
+## 第十二章高性能IO框架库
+
+Linux服务器程序必须处理三类事件 IO事件, 信号, 和定时事件. 处理这三类事件需要考虑
+- 统一事件源
+		使代码简单易懂, 还能避免潜在的问题(我写我的项目的时候后来就这样重构了), 前面的例子使用IO复用
+		来管理所有的事件
+- 可移植性
+- 对并发编程的成支持
+
+## 第十三章多进程编程
+### Api
+fork系统调用
+```c
+#include <sys/types.h>
+#include <unistd.h>
+// 每次调用都返回两次, 在父进程中返回的子进程的PID, 在子进程中返回0
+// 次返回值用于区分是父进程还是子进程
+// 失败返回-1
+pid_t fork(viod);
+```
+exec系列系统调用
+```c
+#include <unistd.h>
+// 声明这个是外部函数或外部变量
+extern char** environ;
+
+// path 参数指定可执行文件的完成路径 file接收文件名,具体位置在PATH中搜寻
+// arg 和 argv用于向新的程序传递参数
+// envp用于设置新程序的环境变量, 未设置则使用全局的环境变量
+// exec函数是不返回的, 除非出错
+// 如果未报错则源程序被新的程序完全替换
+
+int execl(const char* path, const char* arg, ....);
+int execlp(const char* file, const char* arg, ...0);
+int execle(const char* path, const char* arg, ...., char* const envp[])
+int execv(const char* path, char* const argv[]);
+int execvp(const char* file, char* const argv[]);
+int execve(const char* path, char* const argv[], char* const envp[]);
+```
+处理僵尸进程
+```c
+#include <sys/types.h>
+#include <sys/wait.h>
+// wait进程将阻塞进程, 知道该进程的某个子进程结束运行为止. 他返回结束的子进程的PID, 并将该子进程的退出状态存储于stat_loc参数指向的内存中. sys/wait.h 头文件中定义了宏来帮助解释退出信息.
+pid_t wait(int* stat_loc);
+
+// 非阻塞, 只等待由pid指定的目标子进程(-1为阻塞)
+// options函数取值WNOHANG-waitpid立即返回
+// 如果目标子进程正常退出, 则返回子进程的pid
+// 如果还没有结束或意外终止, 则立即返回0
+// 调用失败返回-1
+pid_t waitpid(pid_t pid, int* stat_loc, int options);
+
+WIFEXITED(stat_val); // 子进程正常结束, 返回一个非0
+WEXITSTATUS(stat_val); // 如果WIFEXITED 非0, 它返回子进程的退出码
+WIFSIGNALED(stat_val);// 如果子进程是因为一个未捕获的信号而终止, 返回一个非0值
+WTERMSIG(stat_val);// 如果WIFSIGNALED非0 返回一个信号值
+WIFSTOPPED(stat_val);// 如果子进程意外终止, 它返回一个非0值
+WSTOPSIG(stat_val);// 如果WIFSTOPED非0, 它返回一个信号值
+```
+
+### ??
+进程是Linux操作系统的基础, 他控制着系统上几乎所有的活动.
+本章内容如下
+- <a href="#13-1">复制进程映像的fork系统调用</a>和<a href="#13-2">替换进程映像的exec系列系统调用</a>
+- <a href="#13-3">僵尸进程以及如何避免僵尸进程</a>
+- 进程间通信最简单的方式 <a href="#13-4">管道</a>
+- 三种System V进程间通信方式: <a href="#13-5">信号量, 消息队列, 共享内存</a>
+它们都是由AT&T System V2版本的UNIX引入的, 所以统称为System V IPC
+- <a href="#13-6">在进程间传递文件描述符的通用方法</a>
+
+
+<a name="13-1">fork系统调用</a>
+fork() 函数复制当前的进程, 在内核进程表中创建一个新的进程表项, 新的进程表项有很多的属性和原进程相同
+`堆指针``栈指针``标志寄存器的值`.
+也存在不同的项目 该进程的PPID(父进程)被设置成原进程的PID,  信号位图被清除(原进程设置的信号处理函数对新进程无效)
+
+子进程代码与父进程完全相同, 同时复制(采用了写时复制, 父进程和子进程对数据执行了写操作才会复制)了父进程的数据(堆数据, 栈数据, 静态数据)
+创建子进程后, 父进程打开的文件描述符默认在子进程中也是打开的
+`文件描述符的引用计数`, `父进程的用户根目录, 当前工作目录等变量的引用计数` 均加1
+(引自维基百科-引用计数是计算机编程语言中的一种内存管理技术，是指将资源（可以是对象、内存或磁盘空间等等）的被引用次数保存起来，当被引用次数变为零时就将其释放的过程。)
+
+<a name="13-2">exec系列系统调用</a>
+
+
+
+<a name="13-3">处理僵尸进程</a>
+对于多进程程序而言, 父进程一般需要跟踪子进程的退出状态. 因此, 当子进程结束运行是, 内核不会立即释放该进程的进程表表项, 以满足父进程后续对孩子进程推出信息的查询
+- 在`子进程结束运行之后, 父进程读取其退出状态前`, 我们称该子进程处于`僵尸态`
+- 另外一使子进程进入僵尸态的情况 - 父进程结束或者异常终止, 而子进程继续运行. (子进程的PPID设置为1,init进程接管了子进程) `父进程结束运行之后, 子进程退出之前`, 处于`僵尸态`
+
+以上两种状态都是父进程没有正确处理子进程的返回信息, 子进程都停留在僵尸态, 占据着内核资源.
+
+waitpid()虽然为非阻塞, 则需要在 waitpid所监视的进程结束后再调用.
+SIGCHLD信号- 子进程结束后将会给父进程发送此信号
+```c
+static void handle_child(int sig)
+{
+	pid_t pid;
+	int stat;
+	while ((pid = waitpid(-1, &stat, WNOHANG)) > 0)
+	{
+		// 善后处理emmmm
+	}
+}
+```
+<a name="13-4">管道</a>
+管道可以在父,子进程间传递数据, 利用的是fork调用后两个文件描述符(fd[0]和fd[1])都保持打开. 一对这样的文件描述符只能保证
+父,子进程间一个方向的数据传输, 父进程和子进程必须有一个关闭fd[0], 另一个关闭fd[1].
+
+可以用两个管道来实现双向传输数据, 也可以用`socketpair`来创建管道
+<a name="13-5">信号量, 消息队列, 共享内存</a>
+
+2019年9月22日17:43:12 到一段落
+
+<a name="13-6"></a>
