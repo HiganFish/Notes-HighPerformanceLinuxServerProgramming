@@ -1,108 +1,3 @@
----
-title: README
-
----
-开头选了这本书, 看到这本书是他人总结三大本后自己写的, 先求个理解大概.
-话说别人推荐的c++服务器咋都是c语言.....
-2019年8月17日20:37:53
-
-每学习一部分就写一个demo
-
-# demo 记录
-```
-2019年8月20日 编写demo <1. 客户端自动发送固定信息> -- 所用基础连接部分和TCP连接部分
-2019年8月22日 编写demo <2. 伪全双工TCP> -- 所用截止到网络Api之前
-2019年8月22日 编写demo <3. 伪全双工UDP> -- 所用截止到网络Api之前
-2019年8月25日 复现 <4. 代码清单5-12 访问daytime服务> -- 第五章结束
-2019年8月28日 复现 <5. 代码清单6-3 用sendfile函数传输文件>
-2019年8月28日 复现 <6. 代码清单6-4 用splice函数实现的回射服务器>
-2019年9月02日 编写demo <7. 贪吃蛇客户端及服务器>
-2019年9月04日06日更新 编写demo <8. 服务器模型-CS模型>
-2019年9月11日 复现 <9. 代码清单-IO复用>
-2019年9月13日 复现 <10. 代码清单9-6和9-7 聊天室程序>
-2019年?月?日 编写demo <11. 代码清单9-6和9-7 聊天室程序>
-2019年?月?日 编写demo <12. 代码清单11-2和11-3及11-4 链表定时器, 处理非活动连接>
-2019年10月11日 编写demo <11. 猜数字游戏客户端以及服务器实现桌位加入>
-```
-## 客户端自动发送固定信息
-
-## 伪全双工TCP
-
-由于也算是初学C语言吧 中间出了好多问题 记录下来
-```c
-/*
-*    以下这一部分 当初并不是这样写的final_msg在之间为 char *final_msg = "xxxx"; 这样在拼接字符串的时候
-*    当然会报错, 因为这样的话在拼接的时候会超出长度溢出. 自己也用过几个语言了但是全有string代替 导致出现了这个问题
-*/
-char final_msg[100];
-memset(final_msg, '\0', strlen(final_msg));
-// from *.*.*.* : msg\n 
-strcat(final_msg, "from ");
-```
-## 伪全双工UDP
-
-accept UDP不需要accept
-int conn = accept(sock, (struct sockaddr*)&client, &client_addrlength);
-解释这个问题需要了解下 accept这个函数处于哪个阶段  下面这两张图片 完美的解释了这个问题
-
-![](https://ftp.bmp.ovh/imgs/2019/08/e2abc0bdcc46c722.png)
-![](https://ftp.bmp.ovh/imgs/2019/08/be70bff1d0f5524a.png)
-
-与网络协议更加密切的见[博客](https://blog.csdn.net/yangbodong22011/article/details/69802544)
-目前不太详细去了解这方面, 但是却是必要的
-到现在@2019年8月23日21:22:52@ 为止 还是不明白我需要的是C++服务器编程, 但推荐却是C服务器编程的书籍
-
-## 贪吃蛇客户端及服务器
-贪吃蛇源码来源于网络, 后续会更换成自己的贪吃蛇程序.
-
-开始编写的服务器, 在socket异常关闭后 会收到大量的空字符串
-
-## 服务器模型-CS模型
-这个代码书上没有, 从网络上学习 并进行更改 后续会更改这个demo 实现聊天程序
-个人修改部分 为 判断socket为非服务器fd后的操作, 使用了splice函数 回复信息还有 通过splice函数的返回值确认是否此fd已经失效, 需要删除
-
-2019年9月6日18:35:38更新
-目前服务器加入了 登录和注册功能 以及重复登录验证
-消息分发加入了用户名提示
-后续有时间会继续更新这个demo
-![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/CS%E8%81%8A%E5%A4%A9%E6%9C%8D%E5%8A%A1%E5%99%A8demo.png)
-
-
-## I/O复用
-LT和ET模式
-ET模式
-```
--> 123456789-123456789-123456789
-event trigger once
-get 9bytes of content: 123456789
-get 9bytes of content: -12345678
-get 9bytes of content: 9-1234567
-get 4bytes of content: 89
-read later
-```
-LT模式
-```
--> 123456789-123456789-123456789
-event trigger once
-get 9bytes of contents: 123456789
-event trigger once
-get 9bytes of contents: -12345678
-event trigger once
-get 9bytes of contents: 9-1234567
-event trigger once
-get 4bytes of contents: 89
-```
-ET模式有任务到来就必须做完, 因为后续将不会继续通知这个事件, 所以ET是epoll的高效工作模式
-LT模式只要事件没被处理就会一直通知
-
-## 聊天室程序
-这个在写完客户端和服务器之后发现只能连接 服务器却不能收到数据
-开始以为是客户端写的问题 用`tcpdump -i lo -nnA 'port 51000 and src host 192.168.9.35'`
-发现客户端能够发送数据, 服务器也会回传确认
-
-然后去观察服务器打开调试发现程序阻塞在accept 然而accept是在一个if判断里, 只有文件描述符是监听的文件
-描述符才会进入其中. 然而这里却进入了不该进入的情况. 观察if的判断条件发现了问题
-
 # 第一篇TCP/IP协议详解
 ## 第一章 TCP/IP协议族
 
@@ -114,41 +9,39 @@ LT模式只要事件没被处理就会一直通知
 
 同样七层是osi参考模型, 简化后得到四层
 ![](https://gss1.bdstatic.com/9vo3dSag_xI4khGkpoWK1HF6hhy/baike/c0%3Dbaike80%2C5%2C5%2C80%2C26/sign=3a1768f4c6fc1e17e9b284632bf99d66/0dd7912397dda144d48ab350bbb7d0a20df48655.jpg)
-
 不同层次之间, 通过接口互相交流, 这样方便了各层次的修改
 
-#### 数据链路层
-实现了网卡接口的网络驱动程序. 这里驱动程序方便了厂商的下层修改, 只需要向上层提供规定的接口即可.
+**应用层**
+负责处理应用程序的逻辑
 
-存在两个协议 *ARP协议(Address Resolve Protocol, 地址解析协议)*. 还有*RARP(Reverse ~, 逆地址解析协议)*.  由于网络层使用IP地址寻址机器, 但是数据链路层使用物理地址(通常为MAC地址), 之间的转化涉及到ARP协议**ARP欺骗, 可能与这个有关, 目前不去学习**
+**表示层**
+定义了数据的格式及加密
 
-#### 网络层
-实现了数据包的选路和转发.  只有数据包到不了目标地址, 就`下一跳`(hop by hop), 选择最近的.
-*IP协议(Internet Protocol)* 以及 *ICMP协议(Internet Control Message Protocol)* 
-后者协议是IP协议的补充, 用来检测网络连接 1. 差错报文, 用来回应状态 2. 查询报文(ping程序就是使用的此报文来判断信息是否送达)
+**会话层**
+它定义了如何开始、控制和结束一个会话，包括对多个双向消息的控制和管理，以便在只完成连续消息的一部分时可以通知应用，从而使表示层看到的数据是连续的
 
-#### 传输层
-
+**传输层**
 为两台主机的应用提供端到端(end to end)的通信. 与网络层使用的下一跳不同, 他只关心起始和终止, 中转过程交给下层处理.
 此层存在两大协议TCP协议和UDP协议
-
-##### TCP协议
-
-TCP协议(Transmission Control Protocol 传输控制协议) - 为应用层提供`可靠的, 面向连接, 基于流的服务`
+*TCP协议*
+TCP协议(Transmission Control Protocol 传输控制协议) - 为应用层提供`可靠的, 面向连接, 基于流的服`
 通过`超时重传`和`数据确认`等确保数据正常送达.
 TCP需要存储一些必要的状态, 可靠的协议
-
-##### UDP协议
+*UDP协议*
 UPD协议(User Datagram Protocol 用户数据报协议) - 为应用层提供`不可靠的, 无连接的, 基于数据报的服务`
 一般需要自己处理`数据确认`和`超时重传`的问题
 通信两者不存储状态, 每次发送都需要指定地址信息. `有自己的长度`
 
-#### 应用层
+**网络层**
+实现了数据包的选路和转发.  只有数据包到不了目标地址, 就`下一跳`(hop by hop), 选择最近的.
+*IP协议(Internet Protocol)* 以及 *ICMP协议(Internet Control Message Protocol)* 
+后者协议是IP协议的补充, 用来检测网络连接 1. 差错报文, 用来回应状态 2. 查询报文(ping程序就是使用的此报文来判断信息是否送达)
 
-负责处理应用程序的逻辑
+**数据链路层**
+实现了网卡接口的网络驱动程序. 这里驱动程序方便了厂商的下层修改, 只需要向上层提供规定的接口即可.
+存在两个协议 *ARP协议(Address Resolve Protocol, 地址解析协议)*. 还有*RARP(Reverse ~, 逆地址解析协议)*.  由于网络层使用IP地址寻址机器, 但是数据链路层使用物理地址(通常为MAC地址), 之间的转化涉及到ARP协议**ARP欺骗, 可能与这个有关, 目前不去学习**
 
-### 封装
-
+**封装**
 上层协议发送到下层协议. 通过封装实现, 层与层之间传输的时候, 加上自己的头部信息.
 被TCP封装的数据成为 `TCP报文段`
 - 内核部分发送成功后删除数据
@@ -159,9 +52,20 @@ UPD协议(User Datagram Protocol 用户数据报协议) - 为应用层提供`不
 再经IP封装后成为`IP数据报`
 最后经过数据链路层封装后为 `帧`
 
+下面的操作都将在如下环境进行
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E6%B5%8B%E8%AF%95%E7%BD%91%E7%BB%9C.png)
+
+**ARP**
+ARP协议能实现任意网络层地址到任意物理地址的转换
+
+## 第二章 IP协议详解
+IP协议是TCP/IP协议簇的核心协议, 是socket网络编程的基础之一
+IP协议为上层协议提供无状态, 无连接, 不可靠的服务
+
 
 # 第二篇深入解析高性能服务器编程
 ## 第五章Linux网络编程基础API
+
 
 socket基础api位于 `sys/socket.h` 头文件中
 socket最开始的含义是 一个IP地址和端口对. 唯一的表示了TCP通信的一段
@@ -177,7 +81,7 @@ socket最开始的含义是 一个IP地址和端口对. 唯一的表示了TCP通
 
 ### API
 
-#### 基础连接
+**基础连接**
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E5%9C%B0%E5%9D%80%E7%BB%93%E6%9E%84%E4%BD%93.jpg)
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E5%8D%8F%E8%AE%AE%E7%BB%84%E5%90%88%E5%9C%B0%E5%9D%80%E6%97%8F.jpg)
 ```c++
@@ -203,6 +107,7 @@ char* inet_ntoa(struct in_addr in);
 // src为 点分十进制字符串的IPv4地址 或 十六进制字符串表示的IPv6地址 存入dst的内存中 af指定地址族
 // 可以为 AF_INET AF_INET6 成功返回1 失败返回-1
 int inet_pton(int af, const char * src, void* dst);
+// 协议名, 需要转换的ip, 存储地址, 长度(有两个常量 INET_ADDRSTRLEN, INET6_ADDRSTRLEN)
 const char* inet_ntop(int af, const void*  src, char* dst, socklen_t cnt);
 
 
@@ -250,7 +155,7 @@ int close(int fd);
 // 成功返回0 失败为-1 设置errno
 int shutdown(int sockfd, int howto)
 ```
-#### 基础TCP
+**基础TCP**
 ```c
 #include<sys/socket.h>
 #include<sys/types.h>
@@ -276,7 +181,7 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags);
 | MSG_OOB       | 发送或接收紧急数据                                                                       | Y          | Y          |
 | MSG_NOSIGNAL  | 向读关闭的管道或者socket连接中写入数据不会触发SIGPIPE信号                                | Y          |        N    |
 
-#### 基础UDP
+**基础UDP**
 ```c
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -286,13 +191,16 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr* 
 ssize_t sendto(int sockfd, const void* buf, size_t len, ing flags, const struct sockaddr* dest_addr, socklen_t addrlen);
 
 ```
-#### 通用读写函数
+
+**通用读写函数**
+
 ```c
 #inclued <sys/socket.h>
 ssize_t recvmsg(int sockfd, struct msghdr* msg, int flags);
 ssize_t sendmsg(int sockfd, struct msghdr* msg, int flags);
 
-struct msghdr {
+struct msghdr
+{
 /* socket address --- 指向socket地址结构变量, 对于TCP连接需要设置为NULL*/
 	void* msg_name; 
 
@@ -303,20 +211,20 @@ struct msghdr {
      * msg_iov指向的数组指定, 称为分散读(scatter read)  ---对于sendmsg而言, msg_iovlen块的分散内存中
      * 的数据将一并发送称为集中写(gather write);
 	*/
-	struct iovec* msg_iov; 
+	struct iovec* msg_iov;
 	int msg_iovlen; /* 分散内存块的数量*/
 	void* msg_control; /* 指向辅助数据的起始位置*/
 	socklen_t msg_controllen; /* 辅助数据的大小*/
-	int msg_flags; /* 复制函数的flags参数, 并在调用过程中更新*
+	int msg_flags; /* 复制函数的flags参数, 并在调用过程中更新*/
 };
 
-struct iovlen {
+struct iovec
+{
 	void* iov_base /* 内存起始地址*/
 	size_t iov_len /* 这块内存长度*/
-	
 }
 ```
-#### 其他Api
+**其他Api**
 ```c
 #include <sys/socket.h>
 // 用于判断 sockfd是否处于带外标记, 即下一个被读取到的数据是否是带外数据, 
@@ -349,7 +257,8 @@ int setsockopt(int sockfd, int level, int option_name, void* option_value,
 
 
 ```c
-struct linger {
+struct linger
+{
 	int l_onoff /* 开启非0, 关闭为0*/
 	int l_linger; /* 滞留时间*/
 	/*
@@ -360,7 +269,9 @@ struct linger {
 	*/
 };
 ```
-#### 网络信息API
+
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/socket%E9%80%89%E9%A1%B9.jpg)
+**网络信息API**
 ```c
 #include <netdb.h>
 // 通过主机名查找ip
@@ -370,15 +281,79 @@ struct hostent* gethostbyname(const char* name);
 // type为IP地址类型 AF_INET和AF_INET6
 struct hostent* gethostbyaddr(const void* addr, size_t len, int type);
 
-struct hostent {
-	char* h_name;
-	char ** h_aliases;
-	int h_addrtype;
-	int h_length;
-	char** h_addr_list; /* 按网络字节序列出主机IP地址列表*/
+struct hostent
+{
+  char *h_name;			/* Official name of host.  */
+  char **h_aliases;		/* Alias list.  */
+  int h_addrtype;		/* Host address type.  */
+  int h_length;			/* Length of address.  */
+  char **h_addr_list;		/* List of addresses from name server.  */
 }
+
+int main(int argc, char* argv[])
+{
+    if (argc != 2)
+    {
+        printf("非法输入\n");
+        exit(0);
+    }
+    char* name = argv[1];
+
+    struct hostent *hostptr{};
+
+    hostptr = gethostbyname(name);
+    if (hostptr == nullptr)
+    {
+        printf("输入存在错误 或无法获取\n");
+        exit(0);
+    }
+
+    printf("Official name of hostptr: %s\n", hostptr->h_name);
+
+    char **pptr;
+    char inet_addr[INET_ADDRSTRLEN];
+
+    printf("Alias list:\n");
+    for (pptr = hostptr->h_aliases; *pptr != nullptr; ++pptr)
+    {
+        printf("\t%s\n", *pptr);
+    }
+
+    switch (hostptr->h_addrtype)
+    {
+        case AF_INET:
+        {
+            printf("List of addresses from name server:\n");
+            for (pptr = hostptr->h_addr_list; *pptr != nullptr; ++pptr)
+            {
+                printf("\t%s\n",
+                        inet_ntop(hostptr->h_addrtype, *pptr, inet_addr, sizeof(inet_addr)));
+            }
+            break;
+        }
+        default:
+        {
+            printf("unknow address type\n");
+            exit(0);
+        }
+    }
+    return 0;
+}
+
+/*
+./run baidu.com
+Official name of hostptr: baidu.com
+Alias list:
+List of addresses from name server:
+	39.156.69.79
+	220.181.38.148
+*/
 ```
-以下两个函数通过读取/etc/services文件 来获取服务信息
+以下两个函数通过读取/etc/services文件 来获取服务信息 以下内容来自维基百科
+
+Service文件是现代操作系统在etc目录下的一个配置文件，记录网络服务名对应的端口号与协议 其用途如下
+- 通过TCP/IP的API函数（声明在netdb.h中）直接查到网络服务名与端口号、使用协议的对应关系。如getservbyname("serve","tcp")获取端口号;getservbyport（htons（port），“tcp”）获取端口和协议上的服务名
+- 如果用户在这个文件中维护所有使用的网络服务名字、端口、协议，那么可以一目了然的获悉哪些端口号用于哪个服务，哪些端口号是空闲的
 ```c
 #include <netdb.h>
 // 根据名称获取某个服务的完整信息
@@ -387,7 +362,8 @@ struct servent getservbyname(const char* name, const char* proto);
 // 根据端口号获取服务信息
 struct servent getservbyport(int port, const char* proto);
 
-struct servent {
+struct servent
+{
 	char* s_name; /* 服务名称*/
 	char ** s_aliases; /* 服务的别名列表*/
 	int s_port; /* 端口号*/
@@ -403,7 +379,8 @@ struct servent {
 // result 指向一个链表, 用于存储getaddrinfo的反馈结果
 int getaddrinfo(const char* hostname, const char* service, const struct addrinfo* hints, struct addrinfo** result)
 
-struct addrinfo{
+struct addrinfo
+{
 	int ai_flags;
 	int ai_family;
 	int ai_socktype; /* 服务类型, SOCK_STREAM或者SOCK_DGRAM*/
@@ -436,47 +413,81 @@ int getnameinfo(const struct sockaddr* sockaddr, socklen_t addrlen, char* host, 
 telnet ip port #来连接服务器的此端口
 netstat -nt | grep port #来查看此端口的监听
 ```
+
 ## 第六章高级IO函数
 
 Linux提供的高级IO函数, 自然是特定条件下能力更强, 不然要他干啥, 特定条件自然限制了他的使用频率
+*文件描述符*
+文件描述符在是一个非负整数。是一个索引值,指向内核为每一个进程所维护的该进程打开文件的记录表。
+STDOUT_FILENO(值为1)- 值为1的文件描述符为标准输出, 关闭STDOUT_FILENO后用dup即可返回最小可用值(目前为, 1) 这样输出就重定向到了调用dup的参数指向的文件
 
-### 创建文件描述符
-#### pipe函数
-这个函数可用于创建一个管道, 实现进程间的通信. (后面13.4节介绍更多, 待我学到后回来补坑)
+### 创建文件描述符 - pipe dup dup2 splice select
+**pipe函数**
+这个函数可用于创建一个管道, 实现进程间的通信. 
 
 ```c
 // 函数定义
-// 参数文件描述符数组 fd[0] 读入 fd[1]写入 单向管道
+// 参数文件描述符数组 fd[0] 读出 fd[1]写入 单向管道
 // 成功返回0, 并将一对打开的文件描述符填入其参数指向的数组
 // 失败返回-1 errno
 #include <unistd.h>
 int pipe(int fd[2]);
-
+```
+```c
 // 双向管道
-// 第一个参数为 协议PF_UNIX(书上是AF_UNIX, 还需要实际测试下)
+// 第一个参数为 协议PF_UNIX(书上是AF_UNIX)感觉这里指明协议使用PF更好一些
 #include <sys/types.h>
 #include <sys/socket.h>
 int socketpair(int domain, int type, int protocol, int fd[2]);
 ```
-#### dup和dup2函数
-**文件描述符**
+学习了后面的内容了解到了进程间通信, 回来补上一个例子
+```c
+int main()
+{
+    int fds[2];
+    socketpair(PF_UNIX, SOCK_STREAM, 0, fds);
+    int pid = fork();
+    if (pid == 0)
+    {
+        close(fds[0]);
+        char a[] = "123";
+        send(fds[1], a, strlen(a), 0);
+    }
+    else if (pid > 0)
+    {
+        close(fds[1]);
+        char b[20] {};
+        recv(fds[0], b, 20, 0);
+        printf("%s", b);
+    }
+}
 ```
-文件描述符在是一个非负整数。是一个索引值,指向内核为每一个进程所维护的该进程打开文件的记录表。
-STDOUT_FILENO(值为1)- 值为1的文件描述符为标准输出, 关闭STDOUT_FILENO后用dup即可返回最小可用值(目前为, 1) 这样输出就重定向到了调用dup的参数指向的文件
-```
-
-将标准输入重定向到一个`文件`或一个网络连接
+**dup和dup2函数**
+复制一个现有的文件描述符
 ```c
 #include <unistd.h>
 // 返回的文件描述符总是取系统当前可用的最小整数值
-int dup(int file_descriptor);
-// 返回的整数值不小于file_descriptor_two参数.
-int dup2(int file_descriptor, int file_descriptor_two);
+int dup(int oldfd);
+// 可以用newfd来制定新的文件描述符, 如果newfd已经被打开则先关闭
+// 如果newfd==oldfd 则不关闭newfd直接返回
+int dup2(int oldfd, int newfd);
 ```
 dup函数创建一个新的文件描述符, 新的文件描述符和原有的file_descriptor共同指向相同的目标.
+回来补上例子, 这个例子由于关掉了`STDOUT_FILENO`dup最小的即为`STDOUT_FILENO`所以
+标准输出都到了这个文件之中
+```c
+int main()
+{
+    int filefd = open("/home/lsmg/1.txt", O_WRONLY);
+    close(STDOUT_FILENO);
+    dup(filefd);
+    printf("123\n");
+    exit(0);
+}
+```
 
-### 读写数据
-#### readv/writev
+### 读写数据 - readv writev mmap munmap
+**readv/writev**
 ```c
 #include <sys/uio.h>
 // count 为 vector的长度, 即为有多少块内存
@@ -487,6 +498,20 @@ ssize_t writev(int fd, const struct iovec* vector, int count);
 struct iovec {
 	void* iov_base /* 内存起始地址*/
 	size_t iov_len /* 这块内存长度*/
+}
+```
+回来补上一个使用例子, 这个例子将一个int的内存表示写入到了文件之中
+使用hexdump查看这个文件`0000000 86a0 0001`可以看到`186a0`即为100000
+```c
+// 2020年1月7日16:52:11
+int main()
+{
+    int file = open("/home/lsmg/1.txt", O_WRONLY);
+    int temp = 100000;
+    iovec temp_iovec{};
+    temp_iovec.iov_base = &temp;
+    temp_iovec.iov_len = sizeof(temp);
+    writev(file, &temp_iovec, 1);
 }
 ```
 sendfile函数
@@ -526,21 +551,21 @@ struct stat
 // 下面其他两个为文件全路径
 int fstat(int filedes, struct stat *buf);
 
+// 当路径指向为符号链接的时候, lstat为符号链接的信息. stat为符号链接指向文件信息
 int stat(const char *path, struct stat *buf);
-// 当路径指向为符号链接的时候, lstat为符号链接的信息. 二stat为符号链接指向文件信息
 int lstat(const char *path, struct stat *buf);
 
 /*
-* ls -s source dist  建立软连接, 类似快捷方式, 也叫符号链接
-* ls source dist  建立硬链接, 同一个文件使用多个不同的别名, 指向同一个文件数据块, 只要硬链接不被完全
+* ln -s source dist  建立软连接, 类似快捷方式, 也叫符号链接
+* ln source dist  建立硬链接, 同一个文件使用多个不同的别名, 指向同一个文件数据块, 只要硬链接不被完全
 * 删除就可以正常访问
 * 文件数据块 - 文件的真正数据是一个文件数据块, 打开的`文件`指向这个数据块, 就是说
 * `文件`本身就类似快捷方式, 指向文件存在的区域.
 */
 ```
-#### mmap和munmap函数
+ **mmap和munmap函数**
 
-一个创建一块进程通讯共享的内存(可以将文件映射入其中), 一个释放这块内存
+`mmap`创建一块进程通讯共享的内存(可以将文件映射入其中), `munmap`释放这块内存
 ```c
 #include <sys/mman.h>
 
@@ -555,7 +580,7 @@ void* mmap(void* start, size_t length, int port, int flags, int fd, off_t offset
 // 成功返回0 失败返回-1
 int munmap(void* start, size_t length);
 ```
-#### splice函数
+**splice函数**
 用于在两个文件名描述符之间移动数据, 0拷贝操作
 ```c
 #include <fcntl.h>
@@ -564,8 +589,70 @@ int munmap(void* start, size_t length);
 // - SPLICE_F_NONBLOCK 非阻塞splice操作, 但会受文件描述符自身的阻塞
 // - SPLICE_F_MORE 给内核一个提示, 后续的splice调用将读取更多的数据???????
 ssize_t splice(int fd_in, loff_t* off_in, int fd_out, loff_t* off_out, size_t len, unsigned int flags);
+
+// 使用splice函数  实现echo服务器
+int main(int argc, char* argv[])
+{
+    if (argc <= 2)
+    {
+        printf("the parmerters is wrong\n");
+        exit(errno);
+    }
+    char *ip = argv[1];
+
+    int port = atoi(argv[2]);
+    printf("the port is %d the ip is %s\n", port, ip);
+
+    int sockfd = socket(PF_INET, SOCK_STREAM, 0);
+    assert(sockfd >= 0);
+
+    struct sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    inet_pton(AF_INET, ip, &address.sin_addr);
+
+    int ret = bind(sockfd, (sockaddr*)&address, sizeof(address));
+    assert(ret != -1);
+
+    ret = listen(sockfd, 5);
+
+    int clientfd{};
+    sockaddr_in client_address{};
+    socklen_t client_addrlen = sizeof(client_address);
+
+    clientfd = accept(sockfd, (sockaddr*)&client_address, &client_addrlen);
+    if (clientfd < 0)
+    {
+        printf("accept error\n");
+    }
+    else
+    {
+        printf("a new connection from %s:%d success\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
+        int fds[2];
+        pipe(fds);
+        ret = splice(clientfd, nullptr, fds[1], nullptr, 32768, SPLICE_F_MORE);
+        assert(ret != -1);
+
+        ret = splice(fds[0], nullptr, clientfd, nullptr, 32768, SPLICE_F_MORE);
+        assert(ret != -1);
+
+        close(clientfd);
+    }
+    close(sockfd);
+    exit(0);
+}
 ```
-#### select() 函数
+
+**select 函数**
+select函数在第二个参数列表 可读的时候返回
+或者是等到了规定的时间返回
+
+返回之后 第二个参数指向fdset的集合 被修改为可读的fd列表
+这就需要每次返回后都更新 fdset集合
+
+返回后 此函数的返回值为可读的fd数量, 遍历fdset集合 同时使用FD_ISSET判断fdset[i] 是否在其中
+然后判断此fd是否为listenfd 如果是则接受新的连接 如果不是说明是已经接受的其他fd 判断是有数据可读
+还是此连接断开
 
 ```c
 #include <fcntl.h> 
@@ -573,12 +660,63 @@ ssize_t splice(int fd_in, loff_t* off_in, int fd_out, loff_t* off_out, size_t le
 // struct fd_set 一个集合,可以存储多个文件描述符
 // - FD_ZERO(&fd_set) 清空 -FD_SET(fd, &fd_set) 放入fd FD_CLR(fd, &fd_set)从其中清除fd
 // - FD_ISSET(fd, &fd_set) 判断是否在其中
-// readfds  需要监视的文件描述符读变化
-// writefds 需要监视的文件描述符写变化
+// readfds  需要监视的文件描述符读变化, 其中的文件描述符可读的时候返回
+// writefds 需要监视的文件描述符写变化, 其中的文件描述符可写的时候返回
 // errorfds 错误
-// 返回值 负值为错误 0 为超时
+// timeout 传入NULL为阻塞, 设置为0秒0微秒则变为非阻塞函数
+// 返回值 负值为错误 等待超时说明文件无变化返回0 有变化返回正值
 int select(int maxfdp,fd_set *readfds,fd_set *writefds,fd_set *errorfds,struct timeval*timeout); 
-// int result_select = select(FD_SETSIZE, &testfds, (fd_set *)0, (fd_set *)0, (struct timeval*)0);
+
+#define exit_if(r, ...) \
+{   \
+    if (r)  \
+    {   \
+        printf(__VA_ARGS__);    \
+        printf("errno no: %d, error msg is %s", errno, strerror(errno));    \
+        exit(1);    \
+    }   \
+}   \
+
+int main(int argc, char* argv[])
+{
+    int keyboard_fd = open("/dev/tty", O_RDONLY | O_NONBLOCK);
+    exit_if(keyboard_fd < 0, "open keyboard fd error\n");
+    fd_set readfd;
+    char recv_buffer = 0;
+
+    while (true)
+    {
+        FD_ZERO(&readfd);
+        FD_SET(0, &readfd);
+
+        timeval timeout {5, 0};
+
+        int ret = select(keyboard_fd + 1, &readfd, nullptr, nullptr, &timeout);
+        exit_if(ret == -1, "select error\n");
+        if (ret > 0)
+        {
+            if (FD_ISSET(keyboard_fd, &readfd))
+            {
+                recv_buffer = 0;
+                read(keyboard_fd, &recv_buffer, 1);
+                if ('\n' == recv_buffer)
+                {
+                    continue;
+                }
+                if ('q' == recv_buffer)
+                {
+                    break;
+                }
+                printf("the input is %c\n", recv_buffer);
+            }
+
+        }
+        if (ret == 0)
+        {
+            printf("timeout\n");
+        }
+    }
+}
 ```
 ## 第七章Linux服务器程序规范
 
@@ -669,7 +807,7 @@ ps和less
 
 ## 第八章高性能服务器程序框架
 
-### 服务器模型-CS模型
+**服务器模型-CS模型**
 
 **优点**
 - 实现起来简单
@@ -680,7 +818,9 @@ ps和less
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E5%9B%BE8-2%20TCP%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%92%8C%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.png)
 
 编写的demo 没有用到fork函数. 后续待完善
-### 服务器框架 IO模型
+
+**服务器框架 IO模型**
+
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%9F%BA%E6%9C%AC%E6%A1%86%E6%9E%B6.png)
 
 这个模型大概能够理解, 自己也算是学了半年的Javaweb.
@@ -696,7 +836,7 @@ connect 被设置为 `EINPROGRESS(正在处理中)`
 常用IO复用函数 `select` `poll` `epoll_wait` 将在第九章后面说明
 信号将在第十章说明
 
-### 两种高效的事件处理模式和并发模式
+**两种高效的事件处理模式和并发模式**
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/Reactor%E6%A8%A1%E5%BC%8F.png)
 
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/Proactor%E6%A8%A1%E5%BC%8F.png)
@@ -732,7 +872,7 @@ connect 被设置为 `EINPROGRESS(正在处理中)`
 **领导者/追随者模式**
 略
 
-### 高效编程方法 - 有限状态机
+**高效编程方法 - 有限状态机**
 ```c
 // 状态独立的有限状态机
 STATE_MACHINE(Package _pack) {
@@ -793,8 +933,8 @@ I/O复用使得程序能同时监听多个文件描述符.
 
 常用手段`select`, `poll`, `epoll`
 
-### Api
-```c
+### select
+```c++
 #inlcude <sys/select.h>
 // nfds - 被监听的文件描述符总数
 // 后面三个分别指向 可读, 可写, 异常等事件对应的文件描述符集合
@@ -808,56 +948,13 @@ FD_SET(int fd, fd_set* fdset);
 FD_CLR(int fd, fd_set* fdset);
 FD_ISSET(int fd, fd_set* fdset);
 // 设置 timeval 超时时间
-struct timeval {
+struct timeval
+{
 	long tv_sec; // 秒
 	long tv_usec; // 微秒
 }
 ```
-```c
-#include <poll.h>
-// fds 结构体类型数组 指定我们感兴趣的文件描述符上发生的可读可写和异常事件\
-// nfds 遍历结合大小
-// timeout 单位为毫秒 -1 为阻塞 0 为立即返回
-int poll(struct pollfd* fds, nfds_t nfds, int timeout);
-
-struct pollfd {
-	int fd;
-	short events;  //注册的事件, 告知poll监听fd上的哪些事件
-	short revents; // 实际发生的事件
-}
-```
-```c
-#include <epoll.h>
-// size 参数只是给内核一个提示, 事件表需要多大
-// 函数返回其他所有epoll系统调用的第一个参数, 来指定要访问的内核事件表
-int epoll_create(int size);
-
-// epfd 为 epoll_create的返回值
-// op为操作类型
-// - EPOLL_CTL_ADD 向事件表中注册fd上的事件
-// - EPOLL_CTL_MOD 修改fd上的注册事件
-// - EPOLL_CTL_DEL 删除fd上的注册事件
-// fd 为要操作的文件描述符
-int epoll_ctl(int epfd, int op, int fd, struct epoll_event* event);
-
-struct epoll_event {
-	_uint32_t events; // epoll事件
-	epoll_data_t data; // 用户数据 是一个联合体
-}
-
-typedef union epoll_data {
-	void* ptr; // ptr fd 不能同时使用
-	int fd;
-	uint32_t u32;
-	uint64_t u64;
-}epoll_data_t
-
-// maxevents监听事件数 必须大于0
-// timeout 为-1 表示阻塞
-// 成功返回就绪的文件描述符个数 失败返回-1
-int epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout);
-```
-### select系统调用
+**select**
 
 文件描述符就绪条件
 - socket内核接收缓存区中的字节数大于或等于 其低水位标记
@@ -867,12 +964,129 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout)
 - socket内核的发送缓冲区的可用字节数大于或等于 其低水位标记
 - socket的写操作被关闭, 对被关闭的socket执行写操作将会触发一个SIGPIPE信号
 - socket使用非阻塞connect 连接成功或失败后
-
-### poll系统调用
+### poll
+**poll**
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/poll%E6%97%B6%E9%97%B4%E7%B1%BB%E5%9E%8B1.png)
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/poll%E6%97%B6%E9%97%B4%E7%B1%BB%E5%9E%8B2.png)
 
-### epoll系列系统调用
+```c++
+#include <poll.h>
+// fds 结构体类型数组 指定我们感兴趣的文件描述符上发生的可读可写和异常事件\
+// nfds 遍历结合大小 左闭右开
+// timeout 单位为毫秒 -1 为阻塞 0 为立即返回
+int poll(struct pollfd* fds, nfds_t nfds, int timeout);
+
+struct pollfd
+{
+	int fd;
+	short events;  //注册的事件, 告知poll监听fd上的哪些事件
+	short revents; // 实际发生的事件
+}
+```
+```c++
+#define exit_if(r, ...) \
+{   \
+    if (r)  \
+    {   \
+        printf(__VA_ARGS__);    \
+        printf("errno no: %d, error msg is %s", errno, strerror(errno));    \
+        exit(1);    \
+    }   \
+}   \
+
+struct client_info
+{
+    char *ip_;
+    int port_;
+};
+
+int main(int argc, char* argv[])
+{
+    int port = 8001;
+    char ip[] = "127.0.0.1";
+
+    struct sockaddr_in address;
+    address.sin_port = htons(port);
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htons(INADDR_ANY);
+
+    int listenfd = socket(PF_INET, SOCK_STREAM, 0);
+    exit_if(listenfd < 0, "socket error\n");
+
+    int ret = bind(listenfd, (struct sockaddr*)&address, sizeof(address));
+    exit_if(ret == -1, "bind error\n");
+
+    ret = listen(listenfd, 5);
+    exit_if(ret == -1, "listen error\n");
+
+    constexpr int MAX_CLIENTS = 1024;
+    struct pollfd polls[MAX_CLIENTS] = {};
+    struct client_info clientsinfo[MAX_CLIENTS] = {};
+
+    polls[3].fd = listenfd;
+    polls[3].events = POLLIN | POLLRDHUP;
+
+
+    while (true)
+    {
+        ret = poll(polls, MAX_CLIENTS + 1, -1);
+        exit_if(ret == -1, "poll error\n");
+
+        for (int i = 3; i <= MAX_CLIENTS; ++i)
+        {
+            int fd = polls[i].fd;
+
+            if (polls[i].revents & POLLRDHUP)
+            {
+                polls[i].events = 0;
+                printf("close fd-%d from %s:%d\n", fd, clientsinfo[fd].ip_, clientsinfo[fd].port_);
+            }
+
+            if (polls[i].revents & POLLIN)
+            {
+                if (fd == listenfd)
+                {
+                    struct sockaddr_in client_address;
+                    socklen_t client_addresslen = sizeof(client_address);
+
+                    int clientfd = accept(listenfd, (struct sockaddr*)&client_address,
+                            &client_addresslen);
+
+                    struct client_info *clientinfo = &clientsinfo[clientfd];
+
+                    clientinfo->ip_ = inet_ntoa(client_address.sin_addr);
+                    clientinfo->port_ = ntohs(client_address.sin_port);
+
+                    exit_if(clientfd < 0, "accpet error, from %s:%d\n", clientinfo->ip_,
+                            clientinfo->port_);
+                    printf("accept from %s:%d\n", clientinfo->ip_, clientinfo->port_);
+
+                    polls[clientfd].fd = clientfd;
+                    polls[clientfd].events = POLLIN | POLLRDHUP;
+                }
+                else
+                {
+                    char buffer[1024];
+                    memset(buffer, '\0', sizeof(buffer));
+
+                    ret = read(fd, buffer, 1024);
+                    if(ret == 0)
+                    {
+                        close(fd);
+                    }
+                    else
+                    {
+                        printf("recv from %s:%d:\n%s\n", clientsinfo[fd].ip_,
+                               clientsinfo[fd].port_, buffer);
+                    }
+                }
+            }
+        }
+    }
+}
+```
+### epoll
+**epoll**
 
 epoll是Linux特有的I/O复用函数, 实现上与select,poll有很大的差异
 - epoll使用一组函数完成任务
@@ -886,7 +1100,7 @@ epoll是Linux特有的I/O复用函数, 实现上与select,poll有很大的差异
 
 *event不同于select和poll的数组参数 既用于传入用户注册的事件, 又用于输出内核检测到的就绪事件, 提高了效率*
 
-```c
+```c++
 // 索引poll返回的就绪文件描述符
 int ret = poll(fds, MAX_EVENT_NUMBER - 1);
 // 遍历
@@ -905,7 +1119,15 @@ for(int i = 0; i < ret; i++) {
 ```
 
 **LT和ET模式**
-LT和ET模式
+LT(电平触发, 默认的工作模式)
+LT模式下的epoll相当于一个效率较高的poll
+epoll_wait将会一只通知一个事件知道这个事件被处理
+
+ET(边沿触发, epoll的高效工作模式)模式
+当向epoll内核事件表中注册一个文件描述符上的EPOLLET事件的时候, epoll将用ET模式来操作这个
+文件描述符
+epoll_wait只会通知一次, 不论这个事件有没有完成
+
 ET模式
 ```
 -> 123456789-123456789-123456789
@@ -930,6 +1152,41 @@ get 4bytes of contents: 89
 ```
 ET模式有任务到来就必须做完, 因为后续将不会继续通知这个事件, 所以ET是epoll的高效工作模式
 LT模式只要事件没被处理就会一直通知
+
+```c++
+#include <epoll.h>
+// size 参数只是给内核一个提示, 事件表需要多大
+// 函数返回其他所有epoll系统调用的第一个参数, 来指定要访问的内核事件表
+int epoll_create(int size);
+
+// epfd 为 epoll_create的返回值
+// op为操作类型
+// - EPOLL_CTL_ADD 向事件表中注册fd上的事件
+// - EPOLL_CTL_MOD 修改fd上的注册事件
+// - EPOLL_CTL_DEL 删除fd上的注册事件
+// fd 为要操作的文件描述符
+int epoll_ctl(int epfd, int op, int fd, struct epoll_event* event);
+
+struct epoll_event
+{
+	_uint32_t events; // epoll事件
+	epoll_data_t data; // 用户数据 是一个联合体
+}
+
+typedef union epoll_data
+{
+	void* ptr; // ptr fd 不能同时使用
+	int fd;
+	uint32_t u32;
+	uint64_t u64;
+}epoll_data_t
+
+// maxevents监听事件数 必须大于0
+// timeout 为-1 表示阻塞
+// 成功返回就绪的文件描述符个数 失败返回-1
+int epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout);
+```
+
 ### 三种IO复用的比较
 `select`以及`poll`和`epoll`
 相同
@@ -948,7 +1205,7 @@ connect出错的时候会返回一个errno值 EINPROGRESS - 表示对非阻塞so
 
 ### Api
 发送信号Api
-```c
+```c++
 #include <sys/types.h>
 #include <signal.h>
 
@@ -961,7 +1218,7 @@ connect出错的时候会返回一个errno值 EINPROGRESS - 表示对非阻塞so
 int kill(pid_t pid, int sig);
 ```
 接收信号Api
-```c
+```c++
 #include <signal.h>
 typedef void(*_sighandler_t) (int);
 
@@ -980,7 +1237,7 @@ SIGALRM 由alarm或setitimer设置的实时闹钟超时引起
 SIGCHLD 子进程状态变化
 ```
 信号函数
-```c
+```c++
 // 为一个信号设置处理函数
 #include <signal.h>
 // _handler 指定sig的处理函数
@@ -989,7 +1246,7 @@ _sighandler_t signal(int sig, __sighandler_t _handler)
 
 int sigaction(int sig, struct sigaction* act, struct sigaction* oact)
 ```
-### ??
+### 概述
 
 信号是用户, 系统, 或者进程发送给目标进程的信息, 以通知目标进程某个状态的改变或者系统异常.
 产生条件
@@ -1006,151 +1263,66 @@ int sigaction(int sig, struct sigaction* act, struct sigaction* oact)
 中断系统调用?
 
 ## 第十一章定时器
-
-### Api
-
-### 正文
-
-网络程序需要处理的第三类事件是定时事件
-定时 - 指在一段时间之后触发某段代码的机制
-
-Linux提供了三种定时实现方法
-- socket选项`SO_RCVTIMEO` 和 `SO_SNDTIMEO`
-- SIGALRM信号
-- IO复用系统调用的超时参数
-
-
-第五章介绍了`SO_RCVTIMEO`和`SO_SNDTIMEO` 分别用来设置socket `接受数据超时时间` 和 `发送数据超时时间` 这两个选项对如下有效
-
-复习一下设定函数
-```c
-option_value在这里为 timeval 结构体
-
-// sockfd 目标socket, level执行操作协议(IPv4, IPv6, TCP) option_name 参数指定了选项的名字. 后面值和长度
-// 成功时返回0 失败返回-1
-int getsockopt(int sockfd, int level, int option_name, void* option_value, 
-						socklen_t restrict option_len);
-int setsockopt(int sockfd, int level, int option_name, void* option_value, 
-						socklen_t restrict option_len);
-```
+### socket选项`SO_RCVTIMEO` 和 `SO_SNDTIMEO`
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/SO_RCVTIMEO%E5%92%8CSO_SNDTIMEO%E9%80%89%E9%A1%B9%E7%9A%84%E4%BD%9C%E7%94%A8.png)
 
-定时器的SIGALRM信号
-有`alarm`和`setitimer`函数设置的闹钟超时 - 触发SIGALRM信号
-
-## 第十二章高性能IO框架库
-
-Linux服务器程序必须处理三类事件 IO事件, 信号, 和定时事件. 处理这三类事件需要考虑
-- 统一事件源
-		使代码简单易懂, 还能避免潜在的问题(我写我的项目的时候后来就这样重构了), 前面的例子使用IO复用
-		来管理所有的事件
-- 可移植性
-- 对并发编程的成支持
-
-## 第十三章多进程编程
-### Api
-fork系统调用
-```c
-#include <sys/types.h>
-#include <unistd.h>
-// 每次调用都返回两次, 在父进程中返回的子进程的PID, 在子进程中返回0
-// 次返回值用于区分是父进程还是子进程
-// 失败返回-1
-pid_t fork(viod);
-```
-exec系列系统调用
-```c
-#include <unistd.h>
-// 声明这个是外部函数或外部变量
-extern char** environ;
-
-// path 参数指定可执行文件的完成路径 file接收文件名,具体位置在PATH中搜寻
-// arg 和 argv用于向新的程序传递参数
-// envp用于设置新程序的环境变量, 未设置则使用全局的环境变量
-// exec函数是不返回的, 除非出错
-// 如果未报错则源程序被新的程序完全替换
-
-int execl(const char* path, const char* arg, ....);
-int execlp(const char* file, const char* arg, ...0);
-int execle(const char* path, const char* arg, ...., char* const envp[])
-int execv(const char* path, char* const argv[]);
-int execvp(const char* file, char* const argv[]);
-int execve(const char* path, char* const argv[], char* const envp[]);
-```
-处理僵尸进程
-```c
-#include <sys/types.h>
-#include <sys/wait.h>
-// wait进程将阻塞进程, 知道该进程的某个子进程结束运行为止. 他返回结束的子进程的PID, 并将该子进程的退出状态存储于stat_loc参数指向的内存中. sys/wait.h 头文件中定义了宏来帮助解释退出信息.
-pid_t wait(int* stat_loc);
-
-// 非阻塞, 只等待由pid指定的目标子进程(-1为阻塞)
-// options函数取值WNOHANG-waitpid立即返回
-// 如果目标子进程正常退出, 则返回子进程的pid
-// 如果还没有结束或意外终止, 则立即返回0
-// 调用失败返回-1
-pid_t waitpid(pid_t pid, int* stat_loc, int options);
-
-WIFEXITED(stat_val); // 子进程正常结束, 返回一个非0
-WEXITSTATUS(stat_val); // 如果WIFEXITED 非0, 它返回子进程的退出码
-WIFSIGNALED(stat_val);// 如果子进程是因为一个未捕获的信号而终止, 返回一个非0值
-WTERMSIG(stat_val);// 如果WIFSIGNALED非0 返回一个信号值
-WIFSTOPPED(stat_val);// 如果子进程意外终止, 它返回一个非0值
-WSTOPSIG(stat_val);// 如果WIFSTOPED非0, 它返回一个信号值
-```
-
-### ??
-进程是Linux操作系统的基础, 他控制着系统上几乎所有的活动.
-本章内容如下
-- <a href="#13-1">复制进程映像的fork系统调用</a>和<a href="#13-2">替换进程映像的exec系列系统调用</a>
-- <a href="#13-3">僵尸进程以及如何避免僵尸进程</a>
-- 进程间通信最简单的方式 <a href="#13-4">管道</a>
-- 三种System V进程间通信方式: <a href="#13-5">信号量, 消息队列, 共享内存</a>
-它们都是由AT&T System V2版本的UNIX引入的, 所以统称为System V IPC
-- <a href="#13-6">在进程间传递文件描述符的通用方法</a>
-
-
-<a name="13-1">fork系统调用</a>
-fork() 函数复制当前的进程, 在内核进程表中创建一个新的进程表项, 新的进程表项有很多的属性和原进程相同
-`堆指针``栈指针``标志寄存器的值`.
-也存在不同的项目 该进程的PPID(父进程)被设置成原进程的PID,  信号位图被清除(原进程设置的信号处理函数对新进程无效)
-
-子进程代码与父进程完全相同, 同时复制(采用了写时复制, 父进程和子进程对数据执行了写操作才会复制)了父进程的数据(堆数据, 栈数据, 静态数据)
-创建子进程后, 父进程打开的文件描述符默认在子进程中也是打开的
-`文件描述符的引用计数`, `父进程的用户根目录, 当前工作目录等变量的引用计数` 均加1
-(引自维基百科-引用计数是计算机编程语言中的一种内存管理技术，是指将资源（可以是对象、内存或磁盘空间等等）的被引用次数保存起来，当被引用次数变为零时就将其释放的过程。)
-
-<a name="13-2">exec系列系统调用</a>
-
-
-
-<a name="13-3">处理僵尸进程</a>
-对于多进程程序而言, 父进程一般需要跟踪子进程的退出状态. 因此, 当子进程结束运行是, 内核不会立即释放该进程的进程表表项, 以满足父进程后续对孩子进程推出信息的查询
-- 在`子进程结束运行之后, 父进程读取其退出状态前`, 我们称该子进程处于`僵尸态`
-- 另外一使子进程进入僵尸态的情况 - 父进程结束或者异常终止, 而子进程继续运行. (子进程的PPID设置为1,init进程接管了子进程) `父进程结束运行之后, 子进程退出之前`, 处于`僵尸态`
-
-以上两种状态都是父进程没有正确处理子进程的返回信息, 子进程都停留在僵尸态, 占据着内核资源.
-
-waitpid()虽然为非阻塞, 则需要在 waitpid所监视的进程结束后再调用.
-SIGCHLD信号- 子进程结束后将会给父进程发送此信号
-```c
-static void handle_child(int sig)
+使用示例, 通过设置对应的SO_SNDTIMEO 得到超时后的路线
+```c++
+int timeout_connect(const char* ip, const int port, const int sec)
 {
-	pid_t pid;
-	int stat;
-	while ((pid = waitpid(-1, &stat, WNOHANG)) > 0)
-	{
-		// 善后处理emmmm
-	}
+    struct sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    address.sin_addr.s_addr = inet_addr(ip);
+
+    int sockfd = socket(PF_INET, SOCK_STREAM, 0);
+    exit_if(sockfd < 0, "socket error\n");
+
+    struct timeval timeout{};
+    timeout.tv_sec = sec;
+    timeout.tv_usec = 0;
+    socklen_t timeout_len = sizeof(timeout);
+
+    setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, timeout_len);
+
+    int ret = connect(sockfd, (struct sockaddr*)&address, sizeof(address));
+    if (ret == -1)
+    {
+		// 当 errno为EINPROGRESS 说明 等待了 10S后依然无法连接成功 实现了定时器
+        if (errno == EINPROGRESS)
+        {
+            printf("connecting timeout, process timeout logic\n");
+            return -1;
+        }
+        printf("error occur when connecting to server\n");
+        return -1;
+    }
+    return sockfd;
+}
+
+int main(int argc, char* argv[])
+{
+    exit_if(argc <= 2, "wrong number of parameters\n")
+    const char* ip = argv[1];
+    const int port = atoi(argv[2]);
+
+    int sockfd = timeout_connect(ip, port, 10);
+    if (sockfd < 0)
+    {
+        return 1;
+    }
+    return 0;
 }
 ```
-<a name="13-4">管道</a>
-管道可以在父,子进程间传递数据, 利用的是fork调用后两个文件描述符(fd[0]和fd[1])都保持打开. 一对这样的文件描述符只能保证
-父,子进程间一个方向的数据传输, 父进程和子进程必须有一个关闭fd[0], 另一个关闭fd[1].
 
-可以用两个管道来实现双向传输数据, 也可以用`socketpair`来创建管道
-<a name="13-5">信号量, 消息队列, 共享内存</a>
+### SIGALRM信号-基于升序链表的定时器
+由alarm和setitimer函数设定的实时闹钟一旦超时, 将会触发SIGALRM信号, 用信号处理函数处理定时任务
 
-2019年9月22日17:43:12 到一段落
 
-<a name="13-6"></a>
+### IO复用系统调用的超时参数
+
+### 高性能定时器
+
+#### 时间轮
+
+#### 时间堆
