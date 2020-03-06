@@ -1,3 +1,4 @@
+分了三篇
 # 第一篇TCP/IP协议详解
 ## 第一章 TCP/IP协议族
 
@@ -922,7 +923,7 @@ STATE_MACHINE() {
 **上下文切换和锁**
 减少`锁`的作用区域. 不应该创建太多的工作进程, 而是使用专门的业务逻辑线程.
 
-## 第九章 I/O复用
+# 第九章 I/O复用
 
 I/O复用使得程序能同时监听多个文件描述符.
 - 客户端程序需要同时处理多个socket 非阻塞connect技术
@@ -933,9 +934,9 @@ I/O复用使得程序能同时监听多个文件描述符.
 
 常用手段`select`, `poll`, `epoll`
 
-### select
+## select
 ```c++
-#inlcude <sys/select.h>
+#include <sys/select.h>
 // nfds - 被监听的文件描述符总数
 // 后面三个分别指向 可读, 可写, 异常等事件对应的文件描述符集合
 // timeval select超时时间 如果传递0 则为非阻塞, 设置为NULL则为阻塞
@@ -964,7 +965,7 @@ struct timeval
 - socket内核的发送缓冲区的可用字节数大于或等于 其低水位标记
 - socket的写操作被关闭, 对被关闭的socket执行写操作将会触发一个SIGPIPE信号
 - socket使用非阻塞connect 连接成功或失败后
-### poll
+## poll
 **poll**
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/poll%E6%97%B6%E9%97%B4%E7%B1%BB%E5%9E%8B1.png)
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/poll%E6%97%B6%E9%97%B4%E7%B1%BB%E5%9E%8B2.png)
@@ -1085,7 +1086,7 @@ int main(int argc, char* argv[])
     }
 }
 ```
-### epoll
+## epoll
 **epoll**
 
 epoll是Linux特有的I/O复用函数, 实现上与select,poll有很大的差异
@@ -1187,23 +1188,23 @@ typedef union epoll_data
 int epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout);
 ```
 
-### 三种IO复用的比较
+## 三种IO复用的比较
 `select`以及`poll`和`epoll`
 相同
 - 都能同时监听多个文件描述符, 都将等待timeout参数指定的超时时间, 直到一个或多个文件描述符上有事件发生.
 - 返回值为就绪的文件描述符数量, 返回0则表示没有事件发生
 - ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E4%B8%89%E7%A7%8DIO%E5%A4%8D%E7%94%A8%E6%AF%94%E8%BE%83.png)
 
-### I/O 复用的高级应用, 非阻塞connect
+## I/O 复用的高级应用, 非阻塞connect
 
 connect出错的时候会返回一个errno值 EINPROGRESS - 表示对非阻塞socket调用connect, 连接又没有立即建立的时候, 这时可以调用select和poll函数来监听这个连接失败的socket上的可写事件.
 
 当函数返回的时候, 可以用getsockopt来读取错误码, 并清楚该socket上的错误. 错误码为0表示成功
 
 
-## 第十章信号
+# 第十章信号
 
-### Api
+## Api
 发送信号Api
 ```c++
 #include <sys/types.h>
@@ -1246,7 +1247,7 @@ _sighandler_t signal(int sig, __sighandler_t _handler)
 
 int sigaction(int sig, struct sigaction* act, struct sigaction* oact)
 ```
-### 概述
+## 概述
 
 信号是用户, 系统, 或者进程发送给目标进程的信息, 以通知目标进程某个状态的改变或者系统异常.
 产生条件
@@ -1262,8 +1263,8 @@ int sigaction(int sig, struct sigaction* act, struct sigaction* oact)
 
 中断系统调用?
 
-## 第十一章定时器
-### socket选项`SO_RCVTIMEO` 和 `SO_SNDTIMEO`
+# 第十一章定时器
+## socket选项`SO_RCVTIMEO` 和 `SO_SNDTIMEO`
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/SO_RCVTIMEO%E5%92%8CSO_SNDTIMEO%E9%80%89%E9%A1%B9%E7%9A%84%E4%BD%9C%E7%94%A8.png)
 
 使用示例, 通过设置对应的SO_SNDTIMEO 得到超时后的路线
@@ -1315,14 +1316,407 @@ int main(int argc, char* argv[])
 }
 ```
 
-### SIGALRM信号-基于升序链表的定时器
+## SIGALRM信号-基于升序链表的定时器
 由alarm和setitimer函数设定的实时闹钟一旦超时, 将会触发SIGALRM信号, 用信号处理函数处理定时任务
+ 相关的代码放在了github上 代码还是很多的就不放上来了[连接](https://github.com/rjd67441/Notes-HighPerformanceLinuxServerProgramming/tree/master/12.%20%E4%BB%A3%E7%A0%81%E6%B8%85%E5%8D%9511-2%E5%92%8C11-3%E5%8F%8A11-4%20%E9%93%BE%E8%A1%A8%E5%AE%9A%E6%97%B6%E5%99%A8%2C%20%E5%A4%84%E7%90%86%E9%9D%9E%E6%B4%BB%E5%8A%A8%E8%BF%9E%E6%8E%A5)
+
+总结放在了 日记的博客上 链接后面再甩出来
+## IO复用系统调用的超时参数
+
+## 高性能定时器
+## # 时间轮
+## # 时间堆
+
+# 第十二章高性能IO框架库
+另出一篇博客
+
+# 第十三章多进程编程
+
+## exec系列系统调用
+```c++
+#include <unistd.h>
+// 声明这个是外部函数或外部变量
+extern char** environ;
+
+// path 参数指定可执行文件的完成路径 file接收文件名,具体位置在PATH中搜寻
+// arg 和 argv用于向新的程序传递参数
+// envp用于设置新程序的环境变量, 未设置则使用全局的环境变量
+// exec函数是不返回的, 除非出错
+// 如果未报错则源程序被新的程序完全替换
+
+int execl(const char* path, const char* arg, ....);
+int execlp(const char* file, const char* arg, ...0);
+int execle(const char* path, const char* arg, ...., char* const envp[])
+int execv(const char* path, char* const argv[]);
+int execvp(const char* file, char* const argv[]);
+int execve(const char* path, char* const argv[], char* const envp[]);
+```
+## fork系统调用-进程的创建
+```c++
+#include <sys/types.h>
+#include <unistd.h>
+// 每次调用都返回两次, 在父进程中返回的子进程的PID, 在子进程中返回0
+// 次返回值用于区分是父进程还是子进程
+// 失败返回-1
+pid_t fork(viod);
+```
+fork系统调用
+fork() 函数复制当前的进程, 在内核进程表中创建一个新的进程表项, 新的进程表项有很多的属性和原进程相同
+`堆指针` `栈指针` `标志寄存器的值`.
+也存在不同的项目 该进程的PPID(父进程)被设置成原进程的PID,  信号位图被清除(原进程设置的信号处理函数对新进程无效)
+
+子进程代码与父进程完全相同, 同时复制(采用了写时复制, 父进程和子进程对数据执行了写操作才会复制)了父进程的数据(堆数据, 栈数据, 静态数据)
+创建子进程后, 父进程打开的文件描述符默认在子进程中也是打开的
+`文件描述符的引用计数`, `父进程的用户根目录, 当前工作目录等变量的引用计数` 均加1
+(引自维基百科-引用计数是计算机编程语言中的一种内存管理技术，是指将资源（可以是对象、内存或磁盘空间等等）的被引用次数保存起来，当被引用次数变为零时就将其释放的过程。)
+## 处理僵尸进程-进程的管理
+```c++
+#include <sys/types.h>
+#include <sys/wait.h>
+// wait进程将阻塞进程, 直到该进程的某个子进程结束运行为止. 他返回结束的子进程的PID, 并将该子进程的退出状态存储于stat_loc参数指向的内存中. sys/wait.h 头文件中定义了宏来帮助解释退出信息.
+pid_t wait(int* stat_loc);
+
+// 非阻塞, 只等待由pid指定的目标子进程(-1为阻塞)
+// options函数取值WNOHANG-waitpid立即返回
+// 如果目标子进程正常退出, 则返回子进程的pid
+// 如果还没有结束或意外终止, 则立即返回0
+// 调用失败返回-1
+pid_t waitpid(pid_t pid, int* stat_loc, int options);
+
+WIFEXITED(stat_val); // 子进程正常结束, 返回一个非0
+WEXITSTATUS(stat_val); // 如果WIFEXITED 非0, 它返回子进程的退出码
+WIFSIGNALED(stat_val);// 如果子进程是因为一个未捕获的信号而终止, 返回一个非0值
+WTERMSIG(stat_val);// 如果WIFSIGNALED非0 返回一个信号值
+WIFSTOPPED(stat_val);// 如果子进程意外终止, 它返回一个非0值
+WSTOPSIG(stat_val);// 如果WIFSTOPED非0, 它返回一个信号值
+```
+
+对于多进程程序而言, 父进程一般需要跟踪子进程的退出状态. 因此, 当子进程结束运行是, 内核不会立即释放该进程的进程表表项, 以满足父进程后续对孩子进程推出信息的查询
+- 在`子进程结束运行之后, 父进程读取其退出状态前`, 我们称该子进程处于`僵尸态`
+- 另外一使子进程进入僵尸态的情况 - 父进程结束或者异常终止, 而子进程继续运行. (子进程的PPID设置为1,init进程接管了子进程) `父进程结束运行之后, 子进程退出之前`, 处于`僵尸态`
+
+以上两种状态都是父进程没有正确处理子进程的返回信息, 子进程都停留在僵尸态, 占据着内核资源.
+
+waitpid()虽然为非阻塞, 则需要在 waitpid所监视的进程结束后再调用.
+SIGCHLD信号- 子进程结束后将会给父进程发送此信号
+```c++
+static void handle_child(int sig)
+{
+	pid_t pid;
+	int stat;
+	while ((pid = waitpid(-1, &stat, WNOHANG)) > 0)
+	{
+		// 善后处理emmmm
+	}
+}
+```
+**管道**
+管道可以在父,子进程间传递数据, 利用的是fork调用后两个文件描述符(fd[0]和fd[1])都保持打开. 一对这样的文件描述符只能保证
+父,子进程间一个方向的数据传输, 父进程和子进程必须有一个关闭fd[0], 另一个关闭fd[1].
+
+可以用两个管道来实现双向传输数据, 也可以用`socketpair`来创建管道
+
+## 信号量-进程的锁
+*信号量原语*
+只支持两种操作, 等待(wait)和信号(signal) , 在LInux中等待和信号有特殊的含义, 所以又称为P(passeren, 传递就好像进入临界区)V(vrijgeven, 释放就好像退出临界区)操作.
+假设有信号量SV(可取任何自然数, 这本书只讨论二进制信号量), 对它的PV操作含义为
+- P(SV), 如果SV的值大于0, 就将它减1, 如果sv的值为0 则挂起进程的执行
+- V(SV), 如果其他进程因为等待SV而挂起, 则唤醒之, 如果没有则将SV加1
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E4%BD%BF%E7%94%A8%E4%BF%A1%E5%8F%B7%E9%87%8F%E4%BF%9D%E6%8A%A4%E5%85%B3%E9%94%AE%E4%BB%A3%E7%A0%81%E6%AE%B5.png)
 
 
-### IO复用系统调用的超时参数
 
-### 高性能定时器
+**总结PV使用方法**
 
-#### 时间轮
+使用`semget`获取到唯一的标识.
+使用`semctl`的`SETVAL`传入初始化val的`sem_un`联合体.来初始化val
+调用`semop` 传入唯一标识, `sem_op=-1`执行P(锁)操作`sem_op=1`执行V(开锁)操作
+开关锁通过当`sem_op=-1,semval=0 `
+且未指定`IPC_NOWAIT`
+等待`semval`被`sem_op=1`改为`semval=1`
 
-#### 时间堆
+**创建信号量**
+```c++
+// semeget 系统调用
+// 创建一个全局唯一的信号量集, 或者获取一个已经存在的信号量集
+// key 参数是一个键值, 用来标识一个全局唯一的信号量级,可以在不同进程中获取
+// num_sems 参数指定要创建/获取的信号量集中信号量的数目. 如果是创建信号量-必须指定, 如果是获取-可以指定为0. 一般都是为1
+// sem_flags指定一组标志, 与调用open函数的mode参数相同用来控制权限
+// - 可以与IPC_CREAT 做或运算创建新的信号量集, 即使信号量集存在也不会报错
+// - 联合使用IPC_CREAT和IPC_EXCL来创建一组新的唯一额信号量集
+// - 如果已经存在则会返回错误 errno = EEXIST
+// 成功返回一个正整数, 是信号量集的标识符, 失败返回 -1
+int semget(key_t key, int num_sems, int sem_flags);
+
+int sem_id = semget((key_t)1234, 1, 0666 | IPC_CREAT);
+```
+
+**初始化**
+```c++
+// semctl 系统调用
+// sem_id 参数是由semget返回的信号量集标识符
+// sen_num指定被操作的信号量在信号集中的编号
+// command指定命令, 可以追加命令所需的参数, 不过有推荐格式
+// 成功返回对应command的参数, 失败返回-1 errno
+int semctl(int sem_id, int sem_num, int command, ...);
+
+// 第四个参数 竟然需要手动声明...
+union semun
+{
+	int              val;    /* Value for SETVAL */
+	struct semid_ds *buf;    /* Buffer for IPC_STAT, IPC_SET */
+	unsigned short  *array;  /* Array for GETALL, SETALL */
+	struct seminfo  *__buf;  /* Buffer for IPC_INFO
+								(Linux-specific) */
+};
+```
+---
+与semop信号量关联的一些重要的内核变量
+```c++
+unsigned short semval; // 信号量的值
+unsigned short semzcnt; // 等待信号量值变为0的进程数量
+unsigned short semncnt// 等待信号量值增加的进程数量
+pid_t sempid; // 最后一次执行semop操作的进程ID
+```
+操作信号量, 实际上就是对上面的内核变量操作
+
+```c++
+// sem_id 是由semget调用返回的信号量集的标识符, 用以指定被操作的,目标信号量集.
+// sem_ops 参数指向一个sembuf结构体类型的数组
+// num_sem_ops 说明操作数组中哪个信号量
+// 成功返回0, 失败返回-1 errno. 失败的时候sem_ops[] 中的所有操作不执行
+int semop(int sem_id, struct sembuf* sem_ops, size_t num_sem_ops);
+
+// sem_op < 0 期望获得信号量
+// semval-=abs(sem_op),要求调用进程对被操作信号量集有写权限
+// 如果semval的值大于等于sem_op的绝对值, 则操作成功, 调用进程立即获得信号量
+
+// 如果semval < abs(sem_op) 则在被指定IPC_NOWAIT的时候semop立即返回error, errno=EAGIN
+// 如果没有指定 则 阻塞进程等待信号量可用, 且 semzcnt +=1, 等到下面三种情况唤醒
+// 1 发生semval >= abs(sem_op), semzcnt-=1, semval-=abs(sem_op). 在SEM_UNDO设置时更新semadj
+// 2 被操作的信号量所在的信号量集被进程移除, 此时semop调用失败返回, errno=EIDRM (同 sem_op = 0)
+// 3 调用被系统中断, 此时semop调用失败返回, errno=EINTR, 同时将该信号量的semzcnt减1 (同 sem_op = 0)
+bool P(int sem_id)
+{
+    struct sembuf sem_b;
+    sem_b.sem_num = 0; // 信号量编号 第几个信号量 一般都是第0个
+    sem_b.sem_op = -1; // P
+	// IPC_NOWAIT 无论信号量操作是否成功, 都立即返回
+	// SEM_UNDO当进程退出的时候, 取消正在进行的semop操作 PV操作系统更新进程的semadj变量
+    sem_b.sem_flg = SEM_UNDO;
+    return semop(sem_id, &sem_b, 1) != -1;
+}
+
+
+// sem_op > 0 
+// semval+=sem_op , 要求调用进程对被操作的信号量集有写权限
+// 如果此时设置了SEM_UNDO标志, 则系统将更新进程的semadj变量(用以跟踪进程对信号量的修改情况)
+bool V(int sem_id)
+{
+    struct sembuf sem_b;
+    sem_b.sem_num = 0;
+    sem_b.sem_op = 1; // V
+    sem_b.sem_flg = SEM_UNDO;
+    return semop(sem_id, &sem_b, 1) != -1;
+}
+
+
+// -- sem_op = 0
+// -- 标着这是一个`等待0`的操作, 要求调用进程对被操作信号量集有用读权限
+// -- 如果此时信号量的值是0, 则调用立即返回, 否则semop失败返回, 或者阻塞进程以等待信号量变为0
+// -- 此时如果IPC_NOWAIT 标志被设置, sem_op立即返回错误 errno=EAGAIN
+// -- 如果未指定此标志, 则信号量的semzcnt的值增加1, 这时进程被投入睡眠直到下列三个条件之一发生
+// -- 1 信号量的值samval变为0, 此时系统将该信号量的semzcnt减1
+// -- 2 被操作的信号量所在的信号量集被进程移除, 此时semop调用失败返回, errno=EIDRM
+// -- 3 调用被系统中断, 此时semop调用失败返回, errno=EINTR, 同时将该信号量的semzcnt减1
+
+```
+
+semget成功时返回一个与之关联的内核结构体semid_ds
+```c++
+struct semid_ds
+{
+	struct ipc_perm sem_perm;
+	unsigned long int sem_nsems; // 被设置为num_sems
+	time_t sem_otime; // 被设置为0
+	time_t sem_ctime; // 被设置为当前的系统时间
+}
+// 用来描述权限
+struct ipc_perm
+{
+	uid_t uid; // 所有者的有效用户ID, 被semget设置为调用进程的有效用户ID
+	gid_t gid; // 所有者的有效组ID, 被semget设置为调用进程的有效用户ID
+	uid_t cuid; // 创建者的有效用户ID, 被semget设置为调用进程的有效用户ID
+	gid_t cgid; // 创建者的有效组ID, 被semget设置为调用进程的有效用户ID
+	mode_t mode;// 访问权限, 背着只为sem_flags参数的最低9位.
+}
+```
+
+## 共享内存-进程间通信
+最高效的IPC(进程间通信)机制
+需要自己同步进程对其的访问, 否则会产生竞态条件
+
+```c++
+// key
+// 与semget相同 标识一段全局唯一的共享内存
+// size 内存区域大小 单位字节
+// shmflg
+// shmflg的参数与semget相同, 同时多了两个额外的参数
+// `SHM_HUGETLB`系统将使用"大页面"来为共享内存分配空间
+// `SHM_NORESERVE`不为共享内存保留swap空间, 如果物理内存不足
+// 在执行写操作的时候将会触发`SIGSEGV`信号
+// 成功返回唯一标识, 失败返回-1 errno
+int shmget(key_t key, size_t size, int shmflg)
+```
+同时会创建对应的`shmid_ds`结构体
+```c++
+struct shmid_ds
+{
+	struct ipc_perm shm_per; // 权限相关
+	size_t shm_segsz; // 共享内存大小 单位字节	size
+	__time_t shm_atime; // 对这段内存最后一次调用semat的时间 0
+	__time_t shm_dtime; // 对这段内存最后一次调用semdt的时间 0
+	__time_t shm_ctime; // 对这段内存最后一次调用semctl的时间 当前时间
+	__pid_t shm_cpid; // 创建者PID
+	__pid_t lpid; // 最后一次执行shmat或shmdt的进程PID
+	shmatt_t shm_nattach // 关联到此共享内存空间的进程数量
+}
+```
+将共享内存关联到进程的地址空间
+调用成功之后, 修改shmid_ds的部分
+shm_nattach +1
+更新 shm_lpid和shm_atime设置为当前时间
+```c++
+// shm_id 
+// shmget返回的唯一标识
+// shm_addr 
+// 关联到进程的哪块地址空间, 其效果还受到shmflg的可选标识SHM_RND的影响
+// 如果shm_addr = NULL, 则关联地址由操作系统决定, 代码可移植性强
+// 如果 shm_addr 非空,且没有`SHM_RND`标志 则关联到指定的地址处
+// 如果 shm_addr 非空, 但是设置了标志 *这里还没用到, 暂时不写*
+// shmflg
+// SHM_RDONLY 设置后内存内容变成只读
+// SHM_REMAP 如果地址shmaddr已经关联到一段内存上则重新关联
+// SHM_EXEC 有执行权限 = 读权限
+// 成功返回关联到的地址, 失败返回 (void*)-1 errno
+void* shmat(int shm_id, const void* shm_addr, int shmflg)
+```
+
+将共享内存从进程地址空间中分离
+成功后
+shm_nattach -1
+更新 shm_lpid和shm_dtime设置为当前时间
+```c++
+// 成功返回0 失败返回-1 errno
+int shmdt(const void* shm_addr)
+```
+
+```c++
+int shm_ctl(int shm_id, int command, struct shmid_ds* buf)
+```
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/shmctl.png)
+
+# 第十四章 多线程编程
+根据运行环境和调度者身份, 线程可以分为两种
+内核线程
+运行在内核空间, 由内核来调度.
+用户线程
+运行在用空间, 由线程库来调用
+
+当内核线程获得CPU的使用权的时候, 他就加载并运行一个用户线程, 所以内核线程相当于用户线程的容器.
+
+线程有三种实现方式
+- 完全在用户空间实现-无需内核支持
+	创建和调度线程无需内核干预, 速度很快.
+	不占用额外的内核资源, 对系统影响较小
+	但是无法运行在多个处理器上, 因为这些用户线程是是实现在一个内核线程上的
+- 完全由内核调度
+	创建和调度线程的任务都交给了内核, 运行在用户空间的线程库无需管理
+	优缺点正好与上一个相反
+- 双层调度
+	结合了前两个的优点
+	不会消耗过多的内核资源,而且线程切换快, 同时它可以充分利用多处理器的优势
+
+## 进程的创建和终止
+```c++
+#include <bits/pthreadtypes.h>
+typedef unsigned long int pthread_t;
+
+#include <pthread.h>
+int pthread_create(pthread_t* thread, const pthread_attr_t* attr, void* (*start_routine)(void*), void* arg);
+// 成功返回0 失败返回错误码
+// thread 用来唯一的标识一个新线程
+// attr用来设置新县城的属性 传递NULL表示默认线程属性
+// start_routine 指定新线程运行的函数
+// arg指定函数的参数
+```
+```c++
+void pthread_exit(void* retval);
+用来保证线程安全干净的退出, 线程函数最好结束时调用.
+通过`retval`参数向线程的回收者传递其退出信息
+执行后不会返回到调用者, 而且永远不会失败
+
+int pthread_join(pthread_t thread, void** retval)
+可以调用这个函数来回收其他线程 不过线程必须是可回收的该函数会一直阻塞知道被回收的线程结束.
+成功时返回0, 失败返回错误码
+等待其他线程结束
+thread 线程标识符
+retval 目标线程的退出返回信息
+
+错误码如下
+`EDEADLK`引起死锁, 两个线程互相针对对方调用pthread_join 或者对自身调用
+`EINVAL`目标线程是不可回收的, 或是其他线程在回收目标线程
+`ESRCH`目标线程不存在
+
+int pthread_cancel(pthread_t thread)
+异常终止一个线程, 即为取消线程
+成功返回0, 失败返回错误码
+
+接收到取消请求的目标线程可以决定是否允许被取消以及如何取消.
+一下两个函数成功返回0 失败返回错误码
+```
+
+```c++
+// 启动线程取消
+int pthread_setcancelstart(int state, int* oldstate)
+第一个参数
+PTHREAD_CANCEL_ENABLE 允许线程被取消, 默认状态
+PTHREAD_CANCEL_DISABLE 不允许被取消, 如果这种线程接收到取消请求, 则会挂起请求指导
+这个线程允许被取消
+第二个参数 返回之前设定的状态
+
+// 设置线程取消类型
+int pthread_setcanceltype(int type, int* oldtype)
+第一个参数
+PTHREAD_CANCEL_ASYNCHRONOUS 线程可以随时被取消
+PTHREAD_CANCEL_DEFERRED 允许目标现成推迟行动, 知道调用了下面几个所谓的取消点函数
+最好使用`pthread_testcancel`函数设置取消点
+设置取消类型(如何取消)
+第二个参数
+原来的取消类型
+```
+
+## POSIX信号量-进程的同步
+多线程也必须考虑线程同步的问题.
+虽然`pthread_join`可以看做简单的线程同步方式不过它无法高效的实现复杂的同步需求
+比如无法实现共享资源独占式访问, 或者在某种条件下唤醒指定的指定线程.
+
+以下函数成功返回0 失败返回-1 errno
+`int sem_init(sem_t* sem, int pshared, unsigned int value)`
+用于初始化一个未命名的信号量.
+如果`pshared`为0 则表示是当前进程的局部信号量, 否则信号量可以在多个进程间共享
+`value`指定参数的初始值
+*初始化已经存在的信号量会导致无法预期的结果*
+
+`int sem_destory(sem_t* sem)`
+销毁信号量, 释放其占用的系统资源
+*销毁正被其他线程等待的信号量, 将会导致无法预期的结果*
+
+`int sem_wait(sem_t* sem)`
+以原子操作的形式将信号量的值 -1, 如果信号量的值为0, 则sem_wait将被阻塞, 知道信号量具有非0值
+
+`int sem_trywait(sem_t* sem)`
+跟上面的函数相同不过不会阻塞. 信号量不为0 则 -1, 为0 则返回-1 errno
+
+`int sem_post(sem_t sem)`
+原子操作将信号量的值 +1
