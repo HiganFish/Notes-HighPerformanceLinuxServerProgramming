@@ -1,15 +1,13 @@
-分了三篇
-# 第一篇TCP/IP协议详解
-## 第一章 TCP/IP协议族
+# 第一章 TCP/IP协议族
 
-### TCP/IP协议族体系结构和主要协议
+## TCP/IP协议族体系结构和主要协议
 协议族中协议众多, 这本书只选取了IP和TCP协议 - 对网络编程影响最直接
 
-见得最多就是这四层结构了, 不过这本书写得更加详细一些
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E5%9B%9B%E5%B1%82%E7%BB%93%E6%9E%84.jpg)
 
-同样七层是osi参考模型, 简化后得到四层
 ![](https://gss1.bdstatic.com/9vo3dSag_xI4khGkpoWK1HF6hhy/baike/c0%3Dbaike80%2C5%2C5%2C80%2C26/sign=3a1768f4c6fc1e17e9b284632bf99d66/0dd7912397dda144d48ab350bbb7d0a20df48655.jpg)
+
+同样七层是osi参考模型, 简化后得到四层
 不同层次之间, 通过接口互相交流, 这样方便了各层次的修改
 
 **应用层**
@@ -24,14 +22,14 @@
 **传输层**
 为两台主机的应用提供端到端(end to end)的通信. 与网络层使用的下一跳不同, 他只关心起始和终止, 中转过程交给下层处理.
 此层存在两大协议TCP协议和UDP协议
-*TCP协议*
-TCP协议(Transmission Control Protocol 传输控制协议) - 为应用层提供`可靠的, 面向连接, 基于流的服`
-通过`超时重传`和`数据确认`等确保数据正常送达.
-TCP需要存储一些必要的状态, 可靠的协议
-*UDP协议*
-UPD协议(User Datagram Protocol 用户数据报协议) - 为应用层提供`不可靠的, 无连接的, 基于数据报的服务`
-一般需要自己处理`数据确认`和`超时重传`的问题
-通信两者不存储状态, 每次发送都需要指定地址信息. `有自己的长度`
+TCP协议(Transmission Control Protocol 传输控制协议)
+- 为应用层提供`可靠的, 面向连接, 基于流的服务`
+- 通过`超时重传`和`数据确认`等确保数据正常送达.
+- TCP需要存储一些必要的状态, 连接的状态, 读写缓冲区, 诸多定时器
+UPD协议(User Datagram Protocol 用户数据报协议)
+- 为应用层提供`不可靠的, 无连接的, 基于数据报的服务`
+- 一般需要自己处理`数据确认`和`超时重传`的问题
+- 通信两者不存储状态, 每次发送都需要指定地址信息. `有自己的长度`
 
 **网络层**
 实现了数据包的选路和转发.  只有数据包到不了目标地址, 就`下一跳`(hop by hop), 选择最近的.
@@ -40,7 +38,7 @@ UPD协议(User Datagram Protocol 用户数据报协议) - 为应用层提供`不
 
 **数据链路层**
 实现了网卡接口的网络驱动程序. 这里驱动程序方便了厂商的下层修改, 只需要向上层提供规定的接口即可.
-存在两个协议 *ARP协议(Address Resolve Protocol, 地址解析协议)*. 还有*RARP(Reverse ~, 逆地址解析协议)*.  由于网络层使用IP地址寻址机器, 但是数据链路层使用物理地址(通常为MAC地址), 之间的转化涉及到ARP协议**ARP欺骗, 可能与这个有关, 目前不去学习**
+存在两个协议 *ARP协议(Address Resolve Protocol, 地址解析协议)*. 还有*RARP(Reverse ~, 逆地址解析协议)*.  由于网络层使用IP地址寻址机器, 但是数据链路层使用物理地址(通常为MAC地址), 之间的转化涉及到ARP协议*ARP欺骗, 可能与这个有关, 目前不去学习*
 
 **封装**
 上层协议发送到下层协议. 通过封装实现, 层与层之间传输的时候, 加上自己的头部信息.
@@ -53,18 +51,96 @@ UPD协议(User Datagram Protocol 用户数据报协议) - 为应用层提供`不
 再经IP封装后成为`IP数据报`
 最后经过数据链路层封装后为 `帧`
 
-下面的操作都将在如下环境进行
-![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E6%B5%8B%E8%AF%95%E7%BD%91%E7%BB%9C.png)
+以太网最大数据帧1518字节 抛去14头部 帧尾4校验
+MTU: 帧的最大传输单元 一般为1500字节
+MSS: TCP数据包最大的数据载量 1460字节 = 1500字节 - 20Ip头-20TCP头 还有额外的40字节可选部分
 
 **ARP**
 ARP协议能实现任意网络层地址到任意物理地址的转换
 
-## 第二章 IP协议详解
+# 第二章 IP协议详解
 IP协议是TCP/IP协议簇的核心协议, 是socket网络编程的基础之一
 IP协议为上层协议提供无状态, 无连接, 不可靠的服务
 
+IP数据报最大长度是65535(2^16 - 1)字节, 但是有MTU的限制
 
-# 第二篇深入解析高性能服务器编程
+当IP数据报的长度超过MTU 将会被分片传输. 分片可能发生在发送端, 也可能发生在中转路由器, 还可能被多次分片. 只有在最终的目标机器上, 这些分片才会被内核中的ip模块重新组装
+
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E6%90%BA%E5%B8%A6ICMP%E6%8A%A5%E6%96%87%E7%9A%84IP%E6%95%B0%E6%8D%AE%E6%8A%A5%E8%A2%AB%E5%88%86%E7%89%87.png)
+
+
+路由机制
+
+
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E8%B7%AF%E7%94%B1%E6%9C%BA%E5%88%B6.png)
+
+
+给定了目标IP地址后, 将会匹配路由表中的哪一项呢? 分三个步骤
+- 查找路由表中和数据报的目标IP地址完全匹配的主机IP地址. 如果找到就使用该路由项. 否则下一步
+- 查找路由表中和数据报的目标IP地址具有相同网路ID的网络IP地址 找到....... 否则下一步
+- 选择默认路由项, 通常意味着下一跳路由是网关
+
+
+# 第三章 TCP协议详解
+
+Tcp读写都是针对缓冲区来说, 所以没有固定的读写次数对应关系.
+
+UDP没有缓冲区, 必须及时接受数据否则会丢包, 或者接收缓冲区过小就会造成数据报截断
+
+ISN-初始序号值
+32位序号 后续的TCP报文段中序号值 seq = ISN + 报文段首字节在整个字节流中的偏移
+32位确认号 收到的TCP报文序号值+1. 这个32位确认号每次发送的是上一次的应答
+
+ACK标志: 表示确认号是否有效. 携带ACK标志的报文段称为`确认报文段`
+PSH标志: 提示接收端应用程序从TCP接受缓冲区中读走数据, 为后续数据腾出空间
+RST标志: 要求对方重新建立连接 携带......`复位报文段`
+SYN标志: 标志请求建立一个连接 携带......`同步报文段`
+FIN标志: 通知对方本端连接要关闭了, 携带..`结束报文段`
+
+16位窗口大小: 窗口指的是接收通告窗口, 告诉对方本端的TCP 接收缓冲区还能容纳多少字节的数据
+16位校验和: `可靠传输的重要保障`发送端填充, 接收端执行CRC算法校验是否损坏, 同时校验`TCP头部`和`数据部分`
+
+
+**TCP连接的建立和关闭**
+
+```s
+# 三次握手
+# 客户端发送请求连接 ISN=seq + 0 = 3683340920
+# mss 最大数据载量1460
+IP 192.168.80.1.7467 > ubuntu.8000: 
+Flags [S], seq 3683340920, win 64240, 
+options [mss 1460,nop,wscale 8,nop,nop,sackOK], length 0
+
+# 同意客户端连接
+# ack = 客户端发送 seq + 1
+# 同时发送服务端的seq
+IP ubuntu.8000 > 192.168.80.1.7467: 
+Flags [S.], seq 938535101, ack 3683340921, win 64240, 
+options [mss 1460,nop,nop,sackOK,nop,wscale 7], length 0
+
+# 虽然这个报文段没有字节 但由于是同步报文段 需要占用一个序号值
+# 这里是tcpdump的处理 ack显示相对值 即 3683340921 - 3683340920 = 1
+IP 192.168.80.1.7467 > ubuntu.8000: 
+Flags [.], ack 938535102, win 4106, length 0
+
+
+# 包含FIN标志 说明要求结束连接 也需要占用一个序号值
+IP 192.168.80.1.7467 > ubuntu.8000: 
+Flags [F.], seq 1, ack 1, win 4106, length 0
+
+# 服务端确认关闭连接
+IP ubuntu.8000 > 192.168.80.1.7467: 
+Flags [.], ack 2, win 502, length 0
+
+# 服务端发送关闭连接
+IP ubuntu.8000 > 192.168.80.1.7467: 
+Flags [F.], seq 1, ack 2, win 4105, length 0
+
+# 客户端确认
+IP 192.168.80.1.7467 > ubuntu.8000: 
+Flags [.], ack 2, win 503, length 0
+```
+
 ## 第五章Linux网络编程基础API
 
 
@@ -1339,14 +1415,14 @@ int main(int argc, char* argv[])
 extern char** environ;
 
 // path 参数指定可执行文件的完成路径 file接收文件名,具体位置在PATH中搜寻
-// arg 和 argv用于向新的程序传递参数
+// arg-接受可变参数 和 argv用于向新的程序传递参数数组
 // envp用于设置新程序的环境变量, 未设置则使用全局的环境变量
 // exec函数是不返回的, 除非出错
 // 如果未报错则源程序被新的程序完全替换
 
-int execl(const char* path, const char* arg, ....);
-int execlp(const char* file, const char* arg, ...0);
-int execle(const char* path, const char* arg, ...., char* const envp[])
+int execl(const char* path, const char* arg, ...);
+int execlp(const char* file, const char* arg, ...);
+int execle(const char* path, const char* arg, ..., char* const envp[])
 int execv(const char* path, char* const argv[]);
 int execvp(const char* file, char* const argv[]);
 int execve(const char* path, char* const argv[], char* const envp[]);
@@ -1361,14 +1437,60 @@ int execve(const char* path, char* const argv[], char* const envp[]);
 pid_t fork(viod);
 ```
 fork系统调用
-fork() 函数复制当前的进程, 在内核进程表中创建一个新的进程表项, 新的进程表项有很多的属性和原进程相同
-`堆指针` `栈指针` `标志寄存器的值`.
-也存在不同的项目 该进程的PPID(父进程)被设置成原进程的PID,  信号位图被清除(原进程设置的信号处理函数对新进程无效)
+fork() 函数复制当前的进程, 在内核进程表中创建一个新的进程表项
+新的进程表项有很多的属性和原进程相同
+- 堆指针
+- 栈指针
+- 标志寄存器的值
+- 子进程代码与父进程完全相同
+- 同时复制(采用了写时复制, 父进程和子进程对数据执行了写操作才会复制)父进程的数据(堆数据, 栈数据, 静态数据)
+- 创建子进程后, *父进程打开的文件描述符默认在子进程中也是打开的* `文件描述符的引用计数`, `父进程的用户根目录, 当前工作目录等变量的引用计数` 均加1
 
-子进程代码与父进程完全相同, 同时复制(采用了写时复制, 父进程和子进程对数据执行了写操作才会复制)了父进程的数据(堆数据, 栈数据, 静态数据)
-创建子进程后, 父进程打开的文件描述符默认在子进程中也是打开的
-`文件描述符的引用计数`, `父进程的用户根目录, 当前工作目录等变量的引用计数` 均加1
+也存在不同的项目
+- 该进程的PPID(标识父进程)被设置成原进程的PID,  
+- `信号位图被清除`(原进程设置的信号处理函数对新进程无效)
+
+
 (引自维基百科-引用计数是计算机编程语言中的一种内存管理技术，是指将资源（可以是对象、内存或磁盘空间等等）的被引用次数保存起来，当被引用次数变为零时就将其释放的过程。)
+
+
+The child process is an exact duplicate of the parent process except
+for the following points:
+*  The child has its own unique process ID, and this PID does not
+	match the ID of any existing process group (setpgid(2)) or
+	session. 子进程拥有自己唯一的进程ID, 不与其他相同
+
+*  The child's parent process ID is the same as the parent's process
+	ID. 子进程的父进程ID PPID 与父进程ID PID相同
+
+*  The child does not inherit its parent's memory locks (mlock(2),
+	mlockall(2)). 子进程不继承父进程的内存锁(保证一部分内存处于内存中, 而不是sawp分区)
+
+*  Process resource utilizations (getrusage(2)) and CPU time counters
+	(times(2)) are reset to zero in the child.
+	进程资源使用和CPU时间计数器在子进程中重置为0
+
+*  The child's set of pending signals is initially empty
+	(sigpending(2)). 信号位图被初始化为空 原信号处理函数对子进程无效 需重新设置
+
+*  The child does not inherit semaphore adjustments from its parent
+	(semop(2)). 不会继承semadj
+
+*  The child does not inherit process-associated record locks from
+	its parent (fcntl(2)).  (On the other hand, it does inherit
+	fcntl(2) open file description locks and flock(2) locks from its
+	parent.)
+
+*  The child does not inherit timers from its parent (setitimer(2),
+	alarm(2), timer_create(2)). 不会继承定时器
+
+*  The child does not inherit outstanding asynchronous I/O operations
+	from its parent (aio_read(3), aio_write(3)), nor does it inherit
+	any asynchronous I/O contexts from its parent (see io_setup(2)).
+
+
+
+
 ## 处理僵尸进程-进程的管理
 ```c++
 #include <sys/types.h>
@@ -1410,11 +1532,6 @@ static void handle_child(int sig)
 	}
 }
 ```
-**管道**
-管道可以在父,子进程间传递数据, 利用的是fork调用后两个文件描述符(fd[0]和fd[1])都保持打开. 一对这样的文件描述符只能保证
-父,子进程间一个方向的数据传输, 父进程和子进程必须有一个关闭fd[0], 另一个关闭fd[1].
-
-可以用两个管道来实现双向传输数据, 也可以用`socketpair`来创建管道
 
 ## 信号量-进程的锁
 *信号量原语*
@@ -1423,8 +1540,6 @@ static void handle_child(int sig)
 - P(SV), 如果SV的值大于0, 就将它减1, 如果sv的值为0 则挂起进程的执行
 - V(SV), 如果其他进程因为等待SV而挂起, 则唤醒之, 如果没有则将SV加1
 ![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/%E4%BD%BF%E7%94%A8%E4%BF%A1%E5%8F%B7%E9%87%8F%E4%BF%9D%E6%8A%A4%E5%85%B3%E9%94%AE%E4%BB%A3%E7%A0%81%E6%AE%B5.png)
-
-
 
 **总结PV使用方法**
 
@@ -1441,10 +1556,9 @@ static void handle_child(int sig)
 // 创建一个全局唯一的信号量集, 或者获取一个已经存在的信号量集
 // key 参数是一个键值, 用来标识一个全局唯一的信号量级,可以在不同进程中获取
 // num_sems 参数指定要创建/获取的信号量集中信号量的数目. 如果是创建信号量-必须指定, 如果是获取-可以指定为0. 一般都是为1
-// sem_flags指定一组标志, 与调用open函数的mode参数相同用来控制权限
+// sem_flags指定一组标志, 来控制权限
 // - 可以与IPC_CREAT 做或运算创建新的信号量集, 即使信号量集存在也不会报错
-// - 联合使用IPC_CREAT和IPC_EXCL来创建一组新的唯一额信号量集
-// - 如果已经存在则会返回错误 errno = EEXIST
+// - IPC_CREAT | IPC_EXCL来创建一组唯一信号量集 如果已经存在则会返回错误 errno = EEXIST
 // 成功返回一个正整数, 是信号量集的标识符, 失败返回 -1
 int semget(key_t key, int num_sems, int sem_flags);
 
@@ -1469,6 +1583,21 @@ union semun
 	struct seminfo  *__buf;  /* Buffer for IPC_INFO
 								(Linux-specific) */
 };
+// 初始化信号量
+union semun sem_union;
+sem_union.val = 1;
+// 这里可以直接第三个参数传入1(val)
+if (semctl(sem_id, 0, SETVAL, sem_union) == -1)
+{
+	exit(0);
+}
+
+// 删除信号量
+union semun sem_union{};
+if (semctl(sem_id, 0, IPC_RMID, sem_union) == -1)
+{
+	exit(EXIT_FAILURE);
+}
 ```
 ---
 与semop信号量关联的一些重要的内核变量
@@ -1553,7 +1682,7 @@ struct ipc_perm
 ```
 
 ## 共享内存-进程间通信
-最高效的IPC(进程间通信)机制
+**最高效的IPC(进程间通信)机制**
 需要自己同步进程对其的访问, 否则会产生竞态条件
 
 ```c++
@@ -1561,14 +1690,54 @@ struct ipc_perm
 // 与semget相同 标识一段全局唯一的共享内存
 // size 内存区域大小 单位字节
 // shmflg
-// shmflg的参数与semget相同, 同时多了两个额外的参数
-// `SHM_HUGETLB`系统将使用"大页面"来为共享内存分配空间
-// `SHM_NORESERVE`不为共享内存保留swap空间, 如果物理内存不足
-// 在执行写操作的时候将会触发`SIGSEGV`信号
-// 成功返回唯一标识, 失败返回-1 errno
+// IPC_CREAT 存不存在都创建新的共享内存
+// IPC_CREAT | IPC_EXCL 不存在则创建 存在则报错
+// SHM_HUGETLB 系统将使用"大页面"来为共享内存分配空间
+// SHM_NORESERVE 不为共享内存保留swap空间, 如果物理内存不足
+// -在执行写操作的时候将会触发`SIGSEGV`信号
+// -成功返回唯一标识, 失败返回-1 errno
 int shmget(key_t key, size_t size, int shmflg)
 ```
-同时会创建对应的`shmid_ds`结构体
+
+```c++
+// shm_id 
+// shmget返回的唯一标识
+// shm_addr 
+// 关联到进程的哪块地址空间, 其效果还受到shmflg的可选标识SHM_RND的影响
+// 如果shm_addr = NULL, 则关联地址由操作系统决定, 代码可移植性强
+// 如果 shm_addr 非空,且没有`SHM_RND`标志 则关联到指定的地址处
+// 如果 shm_addr 非空, 但是设置了标志 *这里还没用到, 暂时不写*
+// shmflg
+// SHM_RDONLY 设置后内存内容变成只读, 不设置则为读写模式
+// SHM_REMAP 如果地址shmaddr已经关联到一段内存上则重新关联
+// SHM_EXEC 有执行权限
+// 成功返回关联到的地址, 失败返回 (void*)-1 errno
+void* shmat(int shm_id, const void* shm_addr, int shmflg)
+
+// 将共享内存关联到进程的地址空间 调用成功之后, 修改shmid_ds的部分内容
+// -shm_nattach +1
+// -更新 shm_lpid
+// -shm_atime设置为当前时间
+```
+
+
+```c++
+// 将共享内存从进程地址空间中分离
+// 成功后
+// -shm_nattach -1
+// -更新 shm_lpid和shm_dtime设置为当前时间
+// 成功返回0 失败返回-1 errno
+int shmdt(const void* shm_addr)
+```
+
+```c++
+int shm_ctl(int shm_id, int command, struct shmid_ds* buf)
+```
+![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/shmctl.png)
+
+----
+
+shmget 同时会创建对应的`shmid_ds`结构体
 ```c++
 struct shmid_ds
 {
@@ -1582,39 +1751,86 @@ struct shmid_ds
 	shmatt_t shm_nattach // 关联到此共享内存空间的进程数量
 }
 ```
-将共享内存关联到进程的地址空间
-调用成功之后, 修改shmid_ds的部分
-shm_nattach +1
-更新 shm_lpid和shm_atime设置为当前时间
+
+**共享内存的POSIX方法**
 ```c++
-// shm_id 
-// shmget返回的唯一标识
-// shm_addr 
-// 关联到进程的哪块地址空间, 其效果还受到shmflg的可选标识SHM_RND的影响
-// 如果shm_addr = NULL, 则关联地址由操作系统决定, 代码可移植性强
-// 如果 shm_addr 非空,且没有`SHM_RND`标志 则关联到指定的地址处
-// 如果 shm_addr 非空, 但是设置了标志 *这里还没用到, 暂时不写*
-// shmflg
-// SHM_RDONLY 设置后内存内容变成只读
-// SHM_REMAP 如果地址shmaddr已经关联到一段内存上则重新关联
-// SHM_EXEC 有执行权限 = 读权限
-// 成功返回关联到的地址, 失败返回 (void*)-1 errno
-void* shmat(int shm_id, const void* shm_addr, int shmflg)
+int shmfd = shm_open("/shm_name", O_CREAT | O_RDWR, 0666);
+ERROR_IF(shmfd == -1, "shm open");
+
+int ret = ftruncate(shmfd, BUFFER_SIZE);
+ERROR_IF(ret == -1, "ftruncate");
+
+share_mem = (char*)mmap(nullptr, BUFFER_SIZE,
+		PROT_READ | PROT_WRITE, MAP_SHARED, shmfd, 0);
+ERROR_IF(share_mem == MAP_FAILED, "share_mem");
+close(shmfd);
+
+// 取消关联
+munmap((void*)share_mem, BUFFER_SIZE);
 ```
 
-将共享内存从进程地址空间中分离
-成功后
-shm_nattach -1
-更新 shm_lpid和shm_dtime设置为当前时间
+## 进程通信-管道
+
+管道可以在父,子进程间传递数据, 利用的是fork调用后两个文件描述符(fd[0]和fd[1])都保持打开. 一对这样的文件描述符只能保证
+父,子进程间一个方向的数据传输, 父进程和子进程必须有一个关闭fd[0], 另一个关闭fd[1].
+
+可以用两个管道来实现双向传输数据, 也可以用`socketpair`来创建管道
+
+## 消息队列
+消息队列是两个进程之间传递二进制块数据的一种简单有效的方式.
+每个数据块都有自己的类型, 接收方可以根据类型有选择的接收数据
+
 ```c++
-// 成功返回0 失败返回-1 errno
-int shmdt(const void* shm_addr)
+#include <sys/msg.h>
+// 与semget 相同, 成功返回标识符
+// msgflg的设置和作用域setget相同
+int msgget(key_t key, int msgflg);
 ```
 
 ```c++
-int shm_ctl(int shm_id, int command, struct shmid_ds* buf)
+// msg_ptr参数指向一个准备发送的消息, 消息必须按如下定义
+// msg_sz 指的是mtext的长度!!!
+// msgflg通常仅支持IPC_NOWAIT 以非阻塞形式发送数据
+int msgsnd(int msqid, const void *msg_ptr, size_t msg_sz, int msgflg);
+默认如果消息队列已满, 则会阻塞. 如果设置了 IPC_NOTWAIT
+就立即返回 设置errno=EAGIN
+
+系统自带这个结构体 不过mtext长度是1...
+struct msgbuf
+{
+	long mtype; /* 消息类型 正整数*/
+	char mtext[512]; /* 消息数据*/
+}
 ```
-![](https://lsmg-img.oss-cn-beijing.aliyuncs.com/Linux%E9%AB%98%E6%80%A7%E8%83%BD%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%BC%96%E7%A8%8B%E8%AF%BB%E4%B9%A6%E8%AE%B0%E5%BD%95/shmctl.png)
+
+```c++
+// msgtype = 0 读取消息队列第一个消息
+// msgtype > 0 读取消息队列第一个类型是msgtype的消息 除非标志了MSG_EXCEPT
+// msgtype < 0 读取第一个 类型值 < abs(msgtype)的消息
+
+// IPC_NOWAIT 如果消息队列没有消息, 则msgrcv立即返回并设置errno=ENOMSG
+// MSG_EXCEPT 如果msgtype大于0, 则接收第一个非 msgtype 的数据
+// MSG_NOERROR 消息部分长度超过msg_sz 则将它截断
+int msgrcv(int msqid, void *msg_ptr, size_t msg_sz, long int msgtype, int msgflg);
+处于阻塞状态 当消息队列被移除(errno=EIDRM)或者程序接受到信号(errno=EINTR) 都会中断阻塞状态
+```
+
+```c++
+int msgctl(int msqid, int command, struct msqid_ds *buf);
+
+IPC_STAT 复制消息队列关联的数据结构
+IPC_SET 将buf中的部分成员更新到目标的内核数据
+IPC_RMID 立即移除消息队列, 唤醒所有等待读消息和写消息的进程
+IPC_INFO 获取系统消息队列资源配置信息
+
+MSG_INFO 返回已经分配的消息队列所占用资源信息
+MSG_STAT msgqid不再是标识符, 而是内核消息队列的数组索引
+```
+
+
+## 在进程间传递文件描述符
+
+## IPC命令-查看进程间通信的全局唯一key
 
 # 第十四章 多线程编程
 根据运行环境和调度者身份, 线程可以分为两种
@@ -1639,9 +1855,6 @@ int shm_ctl(int shm_id, int command, struct shmid_ds* buf)
 
 ## 进程的创建和终止
 ```c++
-#include <bits/pthreadtypes.h>
-typedef unsigned long int pthread_t;
-
 #include <pthread.h>
 int pthread_create(pthread_t* thread, const pthread_attr_t* attr, void* (*start_routine)(void*), void* arg);
 // 成功返回0 失败返回错误码
@@ -1671,17 +1884,16 @@ retval 目标线程的退出返回信息
 int pthread_cancel(pthread_t thread)
 异常终止一个线程, 即为取消线程
 成功返回0, 失败返回错误码
-
-接收到取消请求的目标线程可以决定是否允许被取消以及如何取消.
-一下两个函数成功返回0 失败返回错误码
 ```
 
+**线程属性设置**
 ```c++
+接收到取消请求的目标线程可以决定是否允许被取消以及如何取消.
 // 启动线程取消
 int pthread_setcancelstart(int state, int* oldstate)
 第一个参数
 PTHREAD_CANCEL_ENABLE 允许线程被取消, 默认状态
-PTHREAD_CANCEL_DISABLE 不允许被取消, 如果这种线程接收到取消请求, 则会挂起请求指导
+PTHREAD_CANCEL_DISABLE 不允许被取消, 如果这种线程接收到取消请求, 则会挂起请求直到
 这个线程允许被取消
 第二个参数 返回之前设定的状态
 
@@ -1689,34 +1901,549 @@ PTHREAD_CANCEL_DISABLE 不允许被取消, 如果这种线程接收到取消请�
 int pthread_setcanceltype(int type, int* oldtype)
 第一个参数
 PTHREAD_CANCEL_ASYNCHRONOUS 线程可以随时被取消
-PTHREAD_CANCEL_DEFERRED 允许目标现成推迟行动, 知道调用了下面几个所谓的取消点函数
-最好使用`pthread_testcancel`函数设置取消点
+PTHREAD_CANCEL_DEFERRED 允许目标现成推迟行动, 直到调用了下面几个所谓的取消点函数
+最好使用pthread_testcancel函数设置取消点
 设置取消类型(如何取消)
 第二个参数
 原来的取消类型
 ```
 
-## POSIX信号量-进程的同步
+**设置脱离线程**
+```c++
+// 初始化线程属性对象
+int pthread_attr_init(pthread_attr_t *attr);
+// 销毁线程属性对象, 直到再次初始化前都不能用
+int pthread_attr_destory(pthread_attr_t *attr)
+
+// 参数取值
+// -PTHREAD_CREATE_JOINABLE 线程可回收
+// -PTHREAD_CREATE_DETACH 脱离与进程中其他线程的同步 成为脱离线程
+int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate);
+int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
+// 可以直接设置为脱离线程
+int pthread_detach(pthread_t thread)
+```
+
+## 线程同步机制的使用场景
+POSIX信号量-需要自己维护计数值, 用户空间有计数值 信号量自己又计数值
+两份计数值容易出错
+
+互斥锁-对临界资源的独占式访问
+
+条件变量-等待某个条件满足
+当某个共享数据达到某个值的时候, 唤醒等待这个共享数据的线程
+
+读写锁-可以多个进程读, 读的时候不能写, 同时只能一个写
+
+自旋锁-通过while循环频繁尝试获取锁, 适用于锁事件短, 需要快速切换的场景
+
+## POSIX信号量
 多线程也必须考虑线程同步的问题.
-虽然`pthread_join`可以看做简单的线程同步方式不过它无法高效的实现复杂的同步需求
+虽然`pthread_join()`可以看做简单的线程同步方式不过它无法高效的实现复杂的同步需求
 比如无法实现共享资源独占式访问, 或者在某种条件下唤醒指定的指定线程.
 
-以下函数成功返回0 失败返回-1 errno
-`int sem_init(sem_t* sem, int pshared, unsigned int value)`
-用于初始化一个未命名的信号量.
-如果`pshared`为0 则表示是当前进程的局部信号量, 否则信号量可以在多个进程间共享
-`value`指定参数的初始值
-*初始化已经存在的信号量会导致无法预期的结果*
+```c++
+#include<semaphore>
+// 用于初始化一个未命名的信号量.
+// pshared==0 则表示是当前进程的局部信号量, 否则信号量可以在多个进程间共享
+// value指定参数的初始值
+int sem_init(sem_t* sem, int pshared, unsigned int value)
 
-`int sem_destory(sem_t* sem)`
-销毁信号量, 释放其占用的系统资源
-*销毁正被其他线程等待的信号量, 将会导致无法预期的结果*
+// 销毁信号量, 释放其占用的系统资源
+int sem_destory(sem_t* sem)
 
-`int sem_wait(sem_t* sem)`
-以原子操作的形式将信号量的值 -1, 如果信号量的值为0, 则sem_wait将被阻塞, 知道信号量具有非0值
+// 以原子操作的形式将信号量的值 -1, 如果信号量的值为0, 则sem_wait将被阻塞直到sem_wait具有非0值
+int sem_wait(sem_t* sem)
 
-`int sem_trywait(sem_t* sem)`
-跟上面的函数相同不过不会阻塞. 信号量不为0 则 -1, 为0 则返回-1 errno
+// 跟上面的函数相同不过不会阻塞. 信号量不为0则减一操作, 为0则返回-1 errno
+int sem_trywait(sem_t* sem)
 
-`int sem_post(sem_t sem)`
-原子操作将信号量的值 +1
+// 原子操作将信号量的值 +1
+int sem_post(sem_t* sem)
+```
+初始化已经存在的信号量会导致无法预期的结果
+
+销毁正被其他线程等待的信号量, 将会导致无法预期的结果
+
+例子如下
+```c++
+constexpr int kNumberMax = 10;
+std::vector<int> number(kNumberMax);
+
+constexpr int kThreadNum = 10;
+sem_t sems[kThreadNum];
+pthread_t threads[kThreadNum];
+
+constexpr int kPrintTime = 1;
+
+void* t(void *no)
+{
+    int start_sub = *static_cast<int*>(no);
+    int sub =start_sub;
+    int time = 0;
+    while(++time <= kPrintTime)
+    {
+		// 锁住本线程 释放下一个线程
+        sem_wait(&sems[start_sub]);
+        printf("%d\n", number[sub]);
+        sem_post(&sems[(start_sub + 1) % kThreadNum]);
+		// 计算下一次要打印的下标
+        sub = (sub + kThreadNum) % kNumberMax;
+    }
+    pthread_exit(nullptr);
+}
+
+int main()
+{
+    std::iota(number.begin(), number.end(), 0);
+    sem_init(&sems[0], 0, 1);
+    for (int i = 1; i < kThreadNum; ++i)
+    {
+        sem_init(&sems[i], 0, 0);
+    }
+    for (int i = 0; i < kThreadNum; ++i)
+    {
+        pthread_create(&threads[i], nullptr, t, &number[i]);
+    }
+	// 等待最后一个线程结束
+    pthread_join(threads[kThreadNum - 1], nullptr);
+}
+```
+kThreadNum个进程依次打印`[0, kNumberMax)`
+每个进程打印kPrintTime次
+最后一个进程打印完后主线程才能结束
+
+## 互斥锁
+```c++
+// 初始化互斥锁
+// 第一个参数指向目标互斥锁, 第二个参数指定属性 nullptr则为默认
+int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *mutexattr);
+
+// 销毁目标互斥锁
+int pthread_mutex_destory(pthread_mutex_t *mutex);
+
+// 针对普通锁加锁
+int pthread_mutex_lock(pthread_mutex_t *mutex);
+
+// 针对普通锁立即返回 目标未加锁则加锁 如果已经加锁则返回错误码EBUSY
+int pthread_mutex_trylock(pthread_mutex_t *mutex);
+
+// 解锁 如果有其他线程在等待这个互斥锁, 则其中之一获得
+int pthread_mutex_unlock(pthread_mutex_t *mutex);
+```
+
+销毁一个已经加锁的互斥锁 会发生不可预期的后果
+也可使使用宏`PTHREAD_MUTEX_INITIALIZER`来初始化一个互斥锁
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+
+**互斥锁属性设置**
+
+```c++
+int pthread_mutexattr_init(pthread_mutexattr_t *attr);
+
+int pthread_mutexattr_destory(pthread_mutexattr_t *attr);
+
+// PTHREAD_PROCESS_SHARED 跨进程共享
+// PTHREAD_PROCESS_PRIVATE 隶属同一进程的线程
+int pthread_mutexattr_getpshared(const pthread_mutexattr_t *attr, int *pshared);
+int pthread_mutexattr_setpshared(const pthread_mutexattr_t *attr, int pshared);
+
+// PTHREAD_MUTEX_NORMAL 普通锁 默认类型
+// PTHREAD_MUTEX_ERRORCHECK 检错锁
+// PTHREAD_MUTEX_RECURSVE 嵌套锁
+// PTHREAD_MUTEX_DEFAULT 默认锁
+int pthread_mutexattr_gettype(const pthread_mutexattr_t *attr, int *type);
+int pthread_mutexattr_settype(const pthread_mutexattr_t *attr, int type);
+```
+PTHREAD_MUTEX_NORMAL
+一个线程对其加锁后, 其他请求该锁的进程会形成一个等待队列, 解锁后然后按照优先级获得. 保证资源分配公平
+A线程对一个`已经加锁`的普通锁`再次加锁(也是A线程)`-同一线程在解锁前再次加锁引发死锁
+对一个已经`被其他线程加锁`的普通锁`解锁`, 或者`再次解锁已经解锁`的普通锁--解锁-不可预期后果
+
+PTHREAD_MUTEX_ERRORCHECK
+线程对`已经加锁`的检错锁`再次加锁`--加锁-加锁操作返回EDEADLK
+对一个已经`被其他线程加锁`的检错锁`解锁`, 或者`再次解锁已经解锁`的检错锁--解锁-返回EPERM
+
+PTHREAD_MUTEX_RECURSVE
+允许一个线程在释放锁前多次加锁 而不发生死锁.
+如果`其他线程`要获得这个锁, 则`当前锁拥有者`必须执行相应次数的解锁操作--加锁
+对于`已经被其他进程`加锁的嵌套锁解锁, 或者对`已经解锁`的再次解锁--解锁-返回EPERM
+
+PTHREAD_MUTEX_DEFAULT
+这种锁的实现可能为上面三种之一
+对已经加锁的默认锁再次加锁
+对被其他线程加锁的默认锁解锁
+再次解锁已经解锁的默认锁
+都将会发生不可预料后果
+
+例子
+```c++
+pthread_mutex_t mutex;
+int count = 0;
+void* t(void *a)
+{
+    pthread_mutex_lock(&mutex);
+    printf("%d\n", count);
+    count++;
+    pthread_mutex_unlock(&mutex);
+}
+int main()
+{
+    pthread_mutex_init(&mutex, nullptr);
+    pthread_t thread[10];
+    for (int i = 0; i < 10; ++i)
+    {
+        pthread_create(&thread[i], nullptr, t, nullptr);
+    }
+    sleep(3);
+    pthread_mutex_destroy(&mutex);
+}
+```
+
+## 条件变量
+
+```c++
+int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr *cond_attr);
+
+// 销毁一个正在被等待的条件变量 将会失败并返回EBUSY
+int pthread_cont_destory(pthread_cond_t *cond);
+
+// 广播式的唤醒所有等待目标条件变量的线程
+int pthread_cont_broadcast(pthread_cond_t *cond);
+
+// 唤醒一个等待目标条件变量的线程
+int pthread_cond_signal(pthread_cond_t *cond);
+
+// 等待目标条件变量
+int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
+```
+
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+将各个字段初始化为0
+
+pthread_cond_wait的第二个参数, 用于保护条件变量的互斥锁
+掉用函数前必须将 mutex加锁, 否则会发生不可预料的后果.
+函数执行前将调用线程放入条件变量等待队列, 然后将mutex解锁
+
+从函数调用, 到被放入等待队列的时间内, pthread_cond_signal(broadcast)不会修改条件变量的值
+也就是 pthread_cond_wait函数不会错过目标条件变量的任何变化,
+将pthread_cond_wait函数返回的时候, 互斥锁mutex将会再次锁上
+
+例子
+```c++
+pthread_mutex_t mutex;
+pthread_cond_t cond;
+int good = 3;
+int produce_count = 0;
+int consume_count = 0;
+
+void* Producer(void *arg)
+{
+    while(produce_count < 10)
+    {
+        pthread_mutex_lock(&mutex);
+        good++;
+        pthread_mutex_unlock(&mutex);
+
+        produce_count++;
+        printf("produce a good\n");
+		// 通知一个线程
+        pthread_cond_signal(&cond);
+        sleep(2);
+    }
+    pthread_exit(nullptr);
+}
+
+void* Consumer(void *arg)
+{
+    while (consume_count < 13)
+    {
+		// 传入前需要加锁
+        pthread_mutex_lock(&mutex);
+        if (good > 0)
+        {
+            good--;
+            consume_count++;
+            printf("consume a good, reset %d\n", good);
+        }
+        else
+        {
+            printf("good is 0\n");
+            // wait pthread_cond_signal
+            pthread_cond_wait(&cond, &mutex);
+        }
+        pthread_mutex_unlock(&mutex);
+
+        usleep(500 * 1000);
+    }
+    pthread_exit(nullptr);
+}
+
+int main()
+{
+    mutex = PTHREAD_MUTEX_INITIALIZER;
+    cond = PTHREAD_COND_INITIALIZER;
+    pthread_t producer, consumer;
+
+    pthread_create(&consumer, nullptr, Consumer, nullptr);
+    pthread_create(&producer, nullptr, Producer, nullptr);
+
+    pthread_join(consumer, nullptr);
+    pthread_mutex_destroy(&mutex);
+    pthread_cond_destroy(&cond);
+}
+```
+
+## 读写锁
+
+## 自旋锁
+
+
+## 线程同步包装类-多线程环境
+```c++
+class Sem
+{
+public:
+    Sem()
+    {
+        if (sem_init(&sem_, 0, 0) != 0)
+        {
+            throw std::exception();
+        }
+    }
+    ~Sem()
+    {
+        sem_destroy(&sem_);
+    }
+    bool Wait()
+    {
+        return sem_wait(&sem_) == 0;
+    }
+    bool Post()
+    {
+        return sem_post(&sem_) == 0;
+    }
+private:
+    sem_t sem_;
+};
+
+class Mutex
+{
+public:
+    Mutex()
+    {
+        if (pthread_mutex_init(&mutex_, nullptr) != 0)
+        {
+            throw std::exception();
+        }
+
+    }
+    ~Mutex()
+    {
+        pthread_mutex_destroy(&mutex_);
+    }
+    bool Lock()
+    {
+        return pthread_mutex_lock(&mutex_) == 0;
+    }
+    bool Unlock()
+    {
+        return pthread_mutex_unlock(&mutex_) == 0;
+    }
+
+private:
+    pthread_mutex_t mutex_;
+};
+
+class Cond
+{
+public:
+    Cond()
+    {
+        if (pthread_mutex_init(&mutex_, nullptr) != 0)
+        {
+            throw std::exception();
+        }
+        if (pthread_cond_init(&cond_, nullptr) != 0)
+        {
+            // 这里我一开始没有想到..
+            pthread_mutex_destroy(&mutex_);
+            throw std::exception();
+        }
+    }
+    ~Cond()
+    {
+        pthread_mutex_destroy(&mutex_);
+        pthread_cond_destroy(&cond_);
+    };
+    bool Wait()
+    {
+        int ret = 0;
+        pthread_mutex_lock(&mutex_);
+        ret = pthread_cond_wait(&cond_, &mutex_);
+        pthread_mutex_unlock(&mutex_);
+        return ret == 0;
+    }
+    bool Signal()
+    {
+        return pthread_cond_signal(&cond_) == 0;
+    }
+private:
+    pthread_cond_t cond_;
+    pthread_mutex_t mutex_;
+};
+```
+
+线程安全或可重入函数--函数能被多个线程同时调用而不发生竞态条件
+
+多线程程序某个线程调用fork函数, 新进程不会与父进程有相同数量的线程
+子进程只有一个线程-调用fork线程的完美复制
+
+但是子进程会继承父进程的互斥锁(条件变量)的状态, 如果互斥锁被加锁了, 但`不是由`调用fork线程
+锁住的, 此时`子进程`再次对这个互斥锁`执行加锁`操作将会`死锁`.
+
+```c++
+pthread_mutex_t mutex;
+void* another(void *arg)
+{
+    printf("in child thread, lock the mutex\n");
+    pthread_mutex_lock(&mutex);
+    sleep(5);
+    // 解锁后 Prepare才能加锁
+    pthread_mutex_unlock(&mutex);
+    pthread_exit(nullptr);
+}
+// 这个函数在fork创建子进程前被调用
+void Prepare()
+{
+    // 但是会阻塞 直到执行another函数的线程解锁 才能够继续执行
+    // 这个函数执行完毕前fork不会创建子进程
+    pthread_mutex_lock(&mutex);
+}
+// fork创建线程后 返回前 会在子进程和父进程中执行这个函数
+void Infork()
+{
+    pthread_mutex_unlock(&mutex);
+}
+int main()
+{
+    pthread_mutex_init(&mutex, nullptr);
+    pthread_t id;
+    pthread_create(&id, nullptr, another, nullptr);
+
+    sleep(1);
+    // pthread_atfork(Prepare, Infork, Infork);
+    int pid = fork();
+    if (pid < 0)
+    {
+        printf("emmm????\n");
+        pthread_join(id, nullptr);
+        pthread_mutex_destroy(&mutex);
+        return 1;
+    }
+    else if (pid == 0)
+    {
+        printf("child process, want to get the lock\n");
+        pthread_mutex_lock(&mutex);
+        printf("i cann't run to here, opps....\n");
+        pthread_mutex_unlock(&mutex);
+        exit(0);
+    }
+    else
+    {
+        printf("wait start\n");
+        wait(nullptr);
+        printf("wait over\n"); // 没有打印 因为子进程不会终止
+    }
+    pthread_join(id, nullptr);
+    pthread_mutex_destroy(&mutex);
+    return 0;
+}
+// $ in child thread, lock the mutex
+// $ wait start
+// $ child process, want to get the lock
+
+// $ in child thread, lock the mutex
+// $ wait start
+// $ child process, want to get the lock
+// $ i cann't run to here, opps....
+// $ wait over
+```
+
+原版就会发生死锁, 新版(去掉注释的代码) 能够正常运行
+
+```c++
+int pthread_atfork (void (*__prepare) (void),
+			   void (*__parent) (void),
+			   void (*__child) (void));
+```
+第一个句柄 在fork创建子进程前执行
+第二个句柄 在fork创建出子进程后, fork返回前在父进程中执行
+第二个句柄 在fork创建出子进程后, fork返回前在子进程中执行
+
+
+# 第十五章 进程池和线程池
+
+# 线程池 和 简单HTTP服务器
+对我而言神秘已久的线程池终于揭开了面纱.
+没想到这就是线程池23333
+
+线程池写完后 直接写了书上的HTTP服务器.
+
+那个服务器至少我发现两个问题
+- 无法发送大文件
+- 部分请求无法回复
+
+无法发送大文件, 是因为书中使用了writev发送数据
+期初我以为下面的判断 writev返回值 等于 -1就是为了发送大文件, 后来发现这个判断只是给期初就发送失败准备的.
+
+正好前一阵子看了一个服务器的代码
+https://github.com/Jigokubana/Notes-flamingo
+
+
+我就索性直接将发送部分修改了
+```c++
+// write_sum_ 需发送总大小
+// write_idx_ 已发送大小
+
+int temp = 0;
+if (write_sum_ - write_idx_ == 0)
+{
+    Modfd(epollfd_, sockfd_, EPOLLIN);
+    Init();
+    return true;
+}
+while (true)
+{
+    temp = send(sockfd_, &*write_buff_.begin() + write_idx_, write_sum_ - write_idx_, 0);
+    if (temp <= -1)
+    {
+        if (errno == EAGAIN)
+        {
+            Modfd(epollfd_, sockfd_, EPOLLOUT);
+            return true;
+        }
+    }
+    write_idx_ += temp;
+
+    if (write_idx_ == write_sum_)
+    {
+        // 解除绑定移到了其他地方
+        if (linger_)
+        {
+            Init();
+            Modfd(epollfd_, sockfd_, EPOLLIN);
+            return true;
+        }
+        else
+        {
+            Modfd(epollfd_, sockfd_, EPOLLIN);
+            return false;
+        }
+    }
+}
+```
+
+第二个奇葩的问题就是使用ab压测时候 有些请求无法收到回复.
+这个问题等后面在解决把, 等我知识更加丰富了再说
